@@ -92,7 +92,7 @@ const GoalTracker = ({ accountId }) => {
                             onChange={(e) => setTempGoalAmount(e.target.value)}
                             placeholder="Ex: 50000"
                         />
-                        <Button onClick={handleSave} style={{ marginBottom: '2px' }}>Salvar</Button>
+                        <Button onClick={handleSave} style={{ marginBottom: '24px', padding: '12px 24px', fontSize: '1rem', background: 'linear-gradient(135deg, #7b4397, #00d2ff)', border: 'none', minWidth: '120px', height: '54px' }}>Salvar</Button>
                     </div>
                 </div>
             ) : (

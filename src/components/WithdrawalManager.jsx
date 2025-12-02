@@ -130,7 +130,7 @@ const WithdrawalManager = () => {
                                 </div>
                             </div>
                         </div>
-                        <Button type="submit" style={{ width: '100%', marginTop: '15px', background: 'linear-gradient(135deg, #7b4397, #00d2ff)', border: 'none' }}>Registrar Saque</Button>
+                        <Button type="submit" style={{ width: '100%', marginTop: '15px', padding: '12px 24px', fontSize: '1rem', background: 'linear-gradient(135deg, #7b4397, #00d2ff)', border: 'none', height: '54px' }}>Registrar Saque</Button>
                     </form>
                 )}
 

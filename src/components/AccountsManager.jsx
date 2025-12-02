@@ -40,7 +40,7 @@ const AccountsManager = () => {
             {/* Header / Add Button */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>Minhas Mesas</h2>
-                <Button onClick={() => setShowAddForm(!showAddForm)}>
+                <Button onClick={() => setShowAddForm(!showAddForm)} style={{ background: 'linear-gradient(135deg, #7b4397, #00d2ff)', border: 'none' }}>
                     <Plus size={20} /> Nova Mesa
                 </Button>
             </div>
@@ -61,6 +61,8 @@ const AccountsManager = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                                     <NeonInput
                                         label="Número da Conta"
+                                        type="number"
+                                        inputMode="numeric"
                                         value={accountNumber}
                                         onChange={(e) => setAccountNumber(e.target.value)}
                                         placeholder="Ex: 123456"
@@ -151,7 +153,7 @@ const AccountsManager = () => {
                                     )}
                                 </div>
 
-                                <Button type="submit" style={{ width: '100%' }}>Cadastrar Mesa</Button>
+                                <Button type="submit" style={{ width: '100%', padding: '16px 24px', fontSize: '1.1rem', background: 'linear-gradient(135deg, #7b4397, #00d2ff)', border: 'none' }}>Cadastrar Mesa</Button>
                             </form>
                         </Card>
                     </motion.div>

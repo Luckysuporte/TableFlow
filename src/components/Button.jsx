@@ -24,11 +24,11 @@ const Button = ({ children, onClick, variant = 'primary', className = '', size =
     const getSizeStyle = () => {
         switch (size) {
             case 'sm':
-                return { padding: '8px 16px', fontSize: '0.875rem' };
+                return { padding: '10px 20px', fontSize: '0.95rem' };
             case 'lg':
-                return { padding: '16px 32px', fontSize: '1.125rem' };
+                return { padding: '18px 36px', fontSize: '1.2rem' };
             default:
-                return { padding: '12px 24px', fontSize: '1rem' };
+                return { padding: '14px 28px', fontSize: '1.05rem' };
         }
     };
 
