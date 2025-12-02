@@ -78,13 +78,16 @@ export const DataProvider = ({ children }) => {
     };
 
     const getSummary = (accountId = null) => {
-        // Filter withdrawals by accountId if provided
-        const filteredWithdrawals = accountId
-            ? withdrawals.filter(w => w.accountId === accountId)
-            : withdrawals;
+        let totalResult = 0;
 
-        // Calculate total withdrawn
-        const totalResult = filteredWithdrawals.reduce((acc, w) => acc + Number(w.netAmount), 0);
+        if (accountId) {
+            // For specific accounts, use logs (daily trades)
+            const accountLogs = logs.filter(log => log.accountId === accountId);
+            totalResult = accountLogs.reduce((acc, log) => acc + Number(log.amount), 0);
+        } else {
+            // For global view, use withdrawals
+            totalResult = withdrawals.reduce((acc, w) => acc + Number(w.netAmount), 0);
+        }
 
         let targetAmount = Number(goal.amount || 0);
 
