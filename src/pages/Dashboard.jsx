@@ -31,12 +31,23 @@ const Dashboard = () => {
                 padding: '15px 0'
             }}>
                 <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button
+                        onClick={() => setActiveTab('overview')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: 0
+                        }}
+                    >
                         <div style={{ background: 'linear-gradient(135deg, #7b4397, #00d2ff)', padding: '8px', borderRadius: '8px' }}>
                             <LayoutDashboard size={20} color="white" />
                         </div>
-                        <span style={{ fontWeight: 'bold', fontSize: '1.3rem', letterSpacing: '0.5px' }}>TableFlow</span>
-                    </div>
+                        <span style={{ fontWeight: 'bold', fontSize: '1.3rem', letterSpacing: '0.5px', color: 'white' }}>TableFlow</span>
+                    </button>
 
                     <div style={{ position: 'relative' }}>
                         <button
