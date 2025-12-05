@@ -33,14 +33,14 @@ export const DataProvider = ({ children }) => {
         try {
             setLoading(true);
 
-            // Load goal
+            // Load goal with better error handling
             const { data: goalData, error: goalError } = await supabase
                 .from('goals')
                 .select('*')
                 .eq('user_id', user.id)
-                .single();
+                .maybeSingle(); // Use maybeSingle instead of single to avoid error when no rows
 
-            if (goalError && goalError.code !== 'PGRST116') {
+            if (goalError) {
                 console.error('Error loading goal:', goalError);
             }
 
@@ -48,7 +48,13 @@ export const DataProvider = ({ children }) => {
                 setGoal({ amount: goalData.amount, name: goalData.name });
             } else {
                 // Create default goal if none exists
-                await createDefaultGoal();
+                try {
+                    await createDefaultGoal();
+                } catch (error) {
+                    console.error('Error creating default goal:', error);
+                    // Set default goal locally if creation fails
+                    setGoal({ amount: 10000, name: 'Meu Objetivo' });
+                }
             }
 
             // Load accounts
@@ -108,6 +114,11 @@ export const DataProvider = ({ children }) => {
 
         } catch (error) {
             console.error('Error loading user data:', error);
+            // Set default values to prevent infinite loading
+            setGoal({ amount: 10000, name: 'Meu Objetivo' });
+            setAccounts([]);
+            setLogs([]);
+            setWithdrawals([]);
         } finally {
             setLoading(false);
         }

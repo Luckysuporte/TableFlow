@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Button from '../components/Button';
 import Card from '../components/Card';
-import { TrendingUp, Shield, Zap } from 'lucide-react';
+import { TrendingUp, Shield, Zap, LayoutDashboard } from 'lucide-react';
 import ShaderBackground from '../components/ui/shader-background';
 
 const LandingPage = () => {
@@ -12,10 +12,19 @@ const LandingPage = () => {
             <ShaderBackground />
 
             <nav className="container" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
-                <h1 className="text-gradient" style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>TableFlow</h1>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <Link to="/login"><Button variant="outline">Login</Button></Link>
-                    <Link to="/register"><Button>Criar Conta</Button></Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ background: 'linear-gradient(135deg, #7b4397, #00d2ff)', padding: '8px', borderRadius: '8px' }}>
+                        <LayoutDashboard size={20} color="white" />
+                    </div>
+                    <h1 className="text-gradient" style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>TableFlow</h1>
+                </div>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <Link to="/login">
+                        <Button variant="outline" style={{ borderRadius: '9999px', padding: '10px 24px' }}>Login</Button>
+                    </Link>
+                    <Link to="/register">
+                        <Button style={{ borderRadius: '9999px', padding: '10px 24px', background: 'linear-gradient(135deg, #7b4397, #00d2ff)', border: 'none' }}>Criar Conta</Button>
+                    </Link>
                 </div>
             </nav>
 

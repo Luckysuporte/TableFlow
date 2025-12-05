@@ -25,7 +25,7 @@ const AccountsManager = () => {
             number: accountNumber,
             name: accountName,
             type: accountType,
-            phase: accountType === 'demo' ? accountPhase : null,
+            phase: accountType === 'demo' ? accountPhase : '1', // Real accounts default to phase 1
             createdAt: new Date().toISOString()
         });
         setShowAddForm(false);
@@ -77,8 +77,13 @@ const AccountsManager = () => {
                                     />
                                 </div>
 
-                                <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                                    <div style={{ flex: 1 }}>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                    gap: '20px',
+                                    width: '100%'
+                                }}>
+                                    <div style={{ width: '100%' }}>
                                         <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', marginBottom: '10px' }}>Tipo de Conta</label>
                                         <div style={{ display: 'flex', gap: '10px' }}>
                                             <button
@@ -91,7 +96,8 @@ const AccountsManager = () => {
                                                     border: accountType === 'demo' ? '1px solid #a855f7' : '1px solid rgba(255,255,255,0.1)',
                                                     background: accountType === 'demo' ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
                                                     color: 'white',
-                                                    cursor: 'pointer'
+                                                    cursor: 'pointer',
+                                                    whiteSpace: 'nowrap'
                                                 }}
                                             >
                                                 Demo (Avaliação)
@@ -106,7 +112,8 @@ const AccountsManager = () => {
                                                     border: accountType === 'real' ? '1px solid #00d2ff' : '1px solid rgba(255,255,255,0.1)',
                                                     background: accountType === 'real' ? 'rgba(0, 210, 255, 0.2)' : 'transparent',
                                                     color: 'white',
-                                                    cursor: 'pointer'
+                                                    cursor: 'pointer',
+                                                    whiteSpace: 'nowrap'
                                                 }}
                                             >
                                                 Real (Aprovada)
@@ -115,7 +122,7 @@ const AccountsManager = () => {
                                     </div>
 
                                     {accountType === 'demo' && (
-                                        <div style={{ flex: 1 }}>
+                                        <div style={{ width: '100%' }}>
                                             <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', marginBottom: '10px' }}>Fase</label>
                                             <div style={{ display: 'flex', gap: '10px' }}>
                                                 <button
@@ -128,7 +135,8 @@ const AccountsManager = () => {
                                                         border: accountPhase === '1' ? '1px solid white' : '1px solid rgba(255,255,255,0.1)',
                                                         background: accountPhase === '1' ? 'rgba(255,255,255,0.1)' : 'transparent',
                                                         color: 'white',
-                                                        cursor: 'pointer'
+                                                        cursor: 'pointer',
+                                                        whiteSpace: 'nowrap'
                                                     }}
                                                 >
                                                     Fase 1
@@ -143,7 +151,8 @@ const AccountsManager = () => {
                                                         border: accountPhase === '2' ? '1px solid white' : '1px solid rgba(255,255,255,0.1)',
                                                         background: accountPhase === '2' ? 'rgba(255,255,255,0.1)' : 'transparent',
                                                         color: 'white',
-                                                        cursor: 'pointer'
+                                                        cursor: 'pointer',
+                                                        whiteSpace: 'nowrap'
                                                     }}
                                                 >
                                                     Fase 2
