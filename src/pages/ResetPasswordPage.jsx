@@ -1,23 +1,41 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import NeonInput from '../components/NeonInput';
-import { LogIn } from 'lucide-react';
+import { Lock, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ShaderBackground from '../components/ui/shader-background';
 
-const LoginPage = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+const ResetPasswordPage = () => {
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
-    const { login } = useAuth();
+    const [loading, setLoading] = useState(false);
+    const { updatePassword } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const result = await login(email, password);
+        setError('');
+
+        // Validações
+        if (newPassword.length < 6) {
+            setError('A senha deve ter no mínimo 6 caracteres');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            setError('As senhas não correspondem');
+            return;
+        }
+
+        setLoading(true);
+        const result = await updatePassword(newPassword);
+        setLoading(false);
+
         if (result.success) {
-            navigate('/dashboard');
+            // Redirecionar para login com mensagem de sucesso
+            navigate('/login', { state: { message: 'Senha atualizada com sucesso! Faça login com sua nova senha.' } });
         } else {
             setError(result.message);
         }
@@ -33,10 +51,8 @@ const LoginPage = () => {
             position: 'relative',
             overflow: 'hidden'
         }}>
-            {/* Animated Shader Background */}
             <ShaderBackground />
 
-            {/* Dark overlay for better readability */}
             <div style={{
                 position: 'absolute',
                 inset: 0,
@@ -45,7 +61,6 @@ const LoginPage = () => {
                 pointerEvents: 'none'
             }}></div>
 
-            {/* Glow effects */}
             <div style={{
                 position: 'absolute',
                 top: '-50%',
@@ -88,7 +103,6 @@ const LoginPage = () => {
                     zIndex: 1
                 }}
             >
-                {/* Icon */}
                 <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
@@ -106,10 +120,9 @@ const LoginPage = () => {
                         border: '1px solid rgba(139, 92, 246, 0.3)'
                     }}
                 >
-                    <LogIn size={36} color="#a855f7" strokeWidth={2} />
+                    <Lock size={36} color="#a855f7" strokeWidth={2} />
                 </motion.div>
 
-                {/* Title */}
                 <motion.h2
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -124,7 +137,7 @@ const LoginPage = () => {
                         letterSpacing: '-0.5px'
                     }}
                 >
-                    Bem-vindo
+                    Nova Senha
                 </motion.h2>
 
                 <motion.p
@@ -139,7 +152,7 @@ const LoginPage = () => {
                         fontWeight: '300'
                     }}
                 >
-                    Entre para continuar sua jornada
+                    Digite sua nova senha abaixo
                 </motion.p>
 
                 {error && (
@@ -164,113 +177,90 @@ const LoginPage = () => {
 
                 <form onSubmit={handleSubmit}>
                     <NeonInput
-                        label="E-mail"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="seu@email.com"
+                        label="Nova Senha"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Digite sua nova senha"
                         required
                     />
                     <NeonInput
-                        label="Senha"
+                        label="Confirmar Senha"
                         type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Digite sua senha"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Digite novamente"
                         required
                     />
 
+                    {newPassword && (
+                        <div style={{
+                            marginTop: '16px',
+                            marginBottom: '8px',
+                            padding: '12px',
+                            background: 'rgba(139, 92, 246, 0.1)',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(139, 92, 246, 0.2)'
+                        }}>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                color: newPassword.length >= 6 ? '#22c55e' : 'rgba(255, 255, 255, 0.5)',
+                                fontSize: '0.85rem',
+                                marginBottom: '4px'
+                            }}>
+                                <CheckCircle size={16} />
+                                <span>Mínimo de 6 caracteres</span>
+                            </div>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                color: newPassword === confirmPassword && confirmPassword !== '' ? '#22c55e' : 'rgba(255, 255, 255, 0.5)',
+                                fontSize: '0.85rem'
+                            }}>
+                                <CheckCircle size={16} />
+                                <span>Senhas correspondem</span>
+                            </div>
+                        </div>
+                    )}
+
                     <button
                         type="submit"
+                        disabled={loading}
                         style={{
                             width: '100%',
                             padding: '16px',
                             marginTop: '12px',
-                            background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                            background: loading ? 'rgba(139, 92, 246, 0.5)' : 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
                             border: 'none',
                             borderRadius: '12px',
                             color: 'white',
                             fontSize: '1.05rem',
                             fontWeight: '700',
-                            cursor: 'pointer',
+                            cursor: loading ? 'not-allowed' : 'pointer',
                             transition: 'all 0.3s ease',
                             boxShadow: '0 8px 24px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
                             letterSpacing: '0.5px'
                         }}
                         onMouseEnter={(e) => {
-                            e.target.style.transform = 'translateY(-2px)';
-                            e.target.style.boxShadow = '0 12px 32px rgba(139, 92, 246, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                            if (!loading) {
+                                e.target.style.transform = 'translateY(-2px)';
+                                e.target.style.boxShadow = '0 12px 32px rgba(139, 92, 246, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                            }
                         }}
                         onMouseLeave={(e) => {
                             e.target.style.transform = 'translateY(0)';
                             e.target.style.boxShadow = '0 8px 24px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
                         }}
                     >
-                        Entrar
+                        {loading ? 'Atualizando...' : 'Redefinir Senha'}
                     </button>
                 </form>
-
-                <p style={{
-                    textAlign: 'center',
-                    marginTop: '20px',
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    fontSize: '0.85rem',
-                    fontWeight: '300'
-                }}>
-                    <Link
-                        to="/forgot-password"
-                        style={{
-                            color: '#a855f7',
-                            fontWeight: '500',
-                            textDecoration: 'none',
-                            transition: 'all 0.2s ease',
-                            textShadow: '0 0 10px rgba(168, 85, 247, 0.3)'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.target.style.color = '#c084fc';
-                            e.target.style.textShadow = '0 0 20px rgba(168, 85, 247, 0.6)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.color = '#a855f7';
-                            e.target.style.textShadow = '0 0 10px rgba(168, 85, 247, 0.3)';
-                        }}
-                    >
-                        Esqueci minha senha
-                    </Link>
-                </p>
-
-                <p style={{
-                    textAlign: 'center',
-                    marginTop: '32px',
-                    color: 'rgba(255, 255, 255, 0.6)',
-                    fontSize: '0.95rem',
-                    fontWeight: '300'
-                }}>
-                    Não tem uma conta?{' '}
-                    <Link
-                        to="/register"
-                        style={{
-                            color: '#a855f7',
-                            fontWeight: '600',
-                            textDecoration: 'none',
-                            transition: 'all 0.2s ease',
-                            textShadow: '0 0 10px rgba(168, 85, 247, 0.3)'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.target.style.color = '#c084fc';
-                            e.target.style.textShadow = '0 0 20px rgba(168, 85, 247, 0.6)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.color = '#a855f7';
-                            e.target.style.textShadow = '0 0 10px rgba(168, 85, 247, 0.3)';
-                        }}
-                    >
-                        Criar conta
-                    </Link>
-                </p>
             </motion.div>
         </div>
     );
 };
 
-export default LoginPage;
+export default ResetPasswordPage;

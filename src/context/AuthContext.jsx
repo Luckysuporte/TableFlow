@@ -64,8 +64,30 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const resetPassword = async (email) => {
+        const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
+        });
+
+        if (error) {
+            return { success: false, message: error.message };
+        }
+        return { success: true, data };
+    };
+
+    const updatePassword = async (newPassword) => {
+        const { data, error } = await supabase.auth.updateUser({
+            password: newPassword,
+        });
+
+        if (error) {
+            return { success: false, message: error.message };
+        }
+        return { success: true, data };
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, register, logout, resetPassword, updatePassword, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );

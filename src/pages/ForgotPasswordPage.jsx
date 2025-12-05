@@ -1,27 +1,139 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import NeonInput from '../components/NeonInput';
-import { LogIn } from 'lucide-react';
+import { Mail, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ShaderBackground from '../components/ui/shader-background';
 
-const LoginPage = () => {
+const ForgotPasswordPage = () => {
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const { login } = useAuth();
-    const navigate = useNavigate();
+    const [success, setSuccess] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const { resetPassword } = useAuth();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const result = await login(email, password);
+        setError('');
+        setLoading(true);
+
+        const result = await resetPassword(email);
+        setLoading(false);
+
         if (result.success) {
-            navigate('/dashboard');
+            setSuccess(true);
         } else {
             setError(result.message);
         }
     };
+
+    if (success) {
+        return (
+            <div style={{
+                minHeight: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '20px',
+                position: 'relative',
+                overflow: 'hidden'
+            }}>
+                <ShaderBackground />
+
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'rgba(20, 0, 39, 0.5)',
+                    zIndex: 0,
+                    pointerEvents: 'none'
+                }}></div>
+
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                    style={{
+                        width: '100%',
+                        maxWidth: '480px',
+                        background: 'rgba(20, 0, 39, 0.7)',
+                        backdropFilter: 'blur(20px)',
+                        borderRadius: '24px',
+                        padding: '48px 40px',
+                        boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(139, 92, 246, 0.1)',
+                        border: '1px solid rgba(139, 92, 246, 0.2)',
+                        position: 'relative',
+                        zIndex: 1,
+                        textAlign: 'center'
+                    }}
+                >
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+                        style={{
+                            width: '80px',
+                            height: '80px',
+                            margin: '0 auto 30px',
+                            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.2))',
+                            borderRadius: '20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 8px 32px rgba(34, 197, 94, 0.3)',
+                            border: '1px solid rgba(34, 197, 94, 0.3)'
+                        }}
+                    >
+                        <Mail size={36} color="#22c55e" strokeWidth={2} />
+                    </motion.div>
+
+                    <h2 style={{
+                        fontSize: '2rem',
+                        fontWeight: '800',
+                        color: 'white',
+                        marginBottom: '16px',
+                        textShadow: '0 0 30px rgba(34, 197, 94, 0.5)'
+                    }}>
+                        Email Enviado!
+                    </h2>
+
+                    <p style={{
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        fontSize: '1rem',
+                        lineHeight: '1.6',
+                        marginBottom: '32px'
+                    }}>
+                        Enviamos um link de recuperação para <strong style={{ color: '#a855f7' }}>{email}</strong>.
+                        <br /><br />
+                        Verifique sua caixa de entrada e clique no link para redefinir sua senha.
+                    </p>
+
+                    <Link to="/login">
+                        <button style={{
+                            width: '100%',
+                            padding: '16px',
+                            background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                            border: 'none',
+                            borderRadius: '12px',
+                            color: 'white',
+                            fontSize: '1.05rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 8px 24px rgba(139, 92, 246, 0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px'
+                        }}>
+                            <ArrowLeft size={20} />
+                            Voltar para Login
+                        </button>
+                    </Link>
+                </motion.div>
+            </div>
+        );
+    }
 
     return (
         <div style={{
@@ -33,10 +145,8 @@ const LoginPage = () => {
             position: 'relative',
             overflow: 'hidden'
         }}>
-            {/* Animated Shader Background */}
             <ShaderBackground />
 
-            {/* Dark overlay for better readability */}
             <div style={{
                 position: 'absolute',
                 inset: 0,
@@ -45,7 +155,6 @@ const LoginPage = () => {
                 pointerEvents: 'none'
             }}></div>
 
-            {/* Glow effects */}
             <div style={{
                 position: 'absolute',
                 top: '-50%',
@@ -55,18 +164,6 @@ const LoginPage = () => {
                 background: 'radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%)',
                 borderRadius: '50%',
                 filter: 'blur(80px)',
-                pointerEvents: 'none',
-                zIndex: 0
-            }}></div>
-            <div style={{
-                position: 'absolute',
-                bottom: '-30%',
-                right: '-10%',
-                width: '600px',
-                height: '600px',
-                background: 'radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 70%)',
-                borderRadius: '50%',
-                filter: 'blur(100px)',
                 pointerEvents: 'none',
                 zIndex: 0
             }}></div>
@@ -82,13 +179,12 @@ const LoginPage = () => {
                     backdropFilter: 'blur(20px)',
                     borderRadius: '24px',
                     padding: '48px 40px',
-                    boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(139, 92, 246, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                    boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(139, 92, 246, 0.1)',
                     border: '1px solid rgba(139, 92, 246, 0.2)',
                     position: 'relative',
                     zIndex: 1
                 }}
             >
-                {/* Icon */}
                 <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
@@ -102,14 +198,13 @@ const LoginPage = () => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: '0 8px 32px rgba(139, 92, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                        boxShadow: '0 8px 32px rgba(139, 92, 246, 0.3)',
                         border: '1px solid rgba(139, 92, 246, 0.3)'
                     }}
                 >
-                    <LogIn size={36} color="#a855f7" strokeWidth={2} />
+                    <Mail size={36} color="#a855f7" strokeWidth={2} />
                 </motion.div>
 
-                {/* Title */}
                 <motion.h2
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -124,7 +219,7 @@ const LoginPage = () => {
                         letterSpacing: '-0.5px'
                     }}
                 >
-                    Bem-vindo
+                    Esqueceu a Senha?
                 </motion.h2>
 
                 <motion.p
@@ -139,7 +234,7 @@ const LoginPage = () => {
                         fontWeight: '300'
                     }}
                 >
-                    Entre para continuar sua jornada
+                    Digite seu email e enviaremos um link para recuperação
                 </motion.p>
 
                 {error && (
@@ -171,73 +266,39 @@ const LoginPage = () => {
                         placeholder="seu@email.com"
                         required
                     />
-                    <NeonInput
-                        label="Senha"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Digite sua senha"
-                        required
-                    />
 
                     <button
                         type="submit"
+                        disabled={loading}
                         style={{
                             width: '100%',
                             padding: '16px',
                             marginTop: '12px',
-                            background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                            background: loading ? 'rgba(139, 92, 246, 0.5)' : 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
                             border: 'none',
                             borderRadius: '12px',
                             color: 'white',
                             fontSize: '1.05rem',
                             fontWeight: '700',
-                            cursor: 'pointer',
+                            cursor: loading ? 'not-allowed' : 'pointer',
                             transition: 'all 0.3s ease',
-                            boxShadow: '0 8px 24px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                            boxShadow: '0 8px 24px rgba(139, 92, 246, 0.4)',
                             letterSpacing: '0.5px'
                         }}
                         onMouseEnter={(e) => {
-                            e.target.style.transform = 'translateY(-2px)';
-                            e.target.style.boxShadow = '0 12px 32px rgba(139, 92, 246, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                            if (!loading) {
+                                e.target.style.transform = 'translateY(-2px)';
+                                e.target.style.boxShadow = '0 12px 32px rgba(139, 92, 246, 0.6)';
+                            }
                         }}
                         onMouseLeave={(e) => {
                             e.target.style.transform = 'translateY(0)';
-                            e.target.style.boxShadow = '0 8px 24px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                            e.target.style.boxShadow = '0 8px 24px rgba(139, 92, 246, 0.4)';
                         }}
                     >
-                        Entrar
+                        {loading ? 'Enviando...' : 'Enviar Link de Recuperação'}
                     </button>
                 </form>
-
-                <p style={{
-                    textAlign: 'center',
-                    marginTop: '20px',
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    fontSize: '0.85rem',
-                    fontWeight: '300'
-                }}>
-                    <Link
-                        to="/forgot-password"
-                        style={{
-                            color: '#a855f7',
-                            fontWeight: '500',
-                            textDecoration: 'none',
-                            transition: 'all 0.2s ease',
-                            textShadow: '0 0 10px rgba(168, 85, 247, 0.3)'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.target.style.color = '#c084fc';
-                            e.target.style.textShadow = '0 0 20px rgba(168, 85, 247, 0.6)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.color = '#a855f7';
-                            e.target.style.textShadow = '0 0 10px rgba(168, 85, 247, 0.3)';
-                        }}
-                    >
-                        Esqueci minha senha
-                    </Link>
-                </p>
 
                 <p style={{
                     textAlign: 'center',
@@ -246,9 +307,9 @@ const LoginPage = () => {
                     fontSize: '0.95rem',
                     fontWeight: '300'
                 }}>
-                    Não tem uma conta?{' '}
+                    Lembrou a senha?{' '}
                     <Link
-                        to="/register"
+                        to="/login"
                         style={{
                             color: '#a855f7',
                             fontWeight: '600',
@@ -265,7 +326,7 @@ const LoginPage = () => {
                             e.target.style.textShadow = '0 0 10px rgba(168, 85, 247, 0.3)';
                         }}
                     >
-                        Criar conta
+                        Voltar para login
                     </Link>
                 </p>
             </motion.div>
@@ -273,4 +334,4 @@ const LoginPage = () => {
     );
 };
 
-export default LoginPage;
+export default ForgotPasswordPage;
