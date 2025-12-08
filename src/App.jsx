@@ -7,6 +7,7 @@ import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import Dashboard from './pages/Dashboard';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 const ProtectedRoute = ({ children }) => {
     const { user, loading } = useAuth();
@@ -33,6 +34,7 @@ const ProtectedRoute = ({ children }) => {
 function App() {
     return (
         <div className="app-container">
+            <PWAInstallPrompt />
             <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<LoginPage />} />

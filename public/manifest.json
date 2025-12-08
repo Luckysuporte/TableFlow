@@ -1,20 +1,29 @@
 {
-    "name": "TableFlow App",
+    "name": "TableFlow - Mesa Proprietária",
     "short_name": "TableFlow",
+    "description": "Controle suas metas e resultados na Mesa Proprietária de forma simples, visual e eficiente",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
-    "background_color": "#FFFFFF",
-    "theme_color": "#000000",
+    "orientation": "portrait-primary",
+    "background_color": "#0f0c29",
+    "theme_color": "#8B5CF6",
+    "categories": [
+        "finance",
+        "productivity"
+    ],
     "icons": [
         {
-            "src": "icons/icon-192x192.png",
+            "src": "/icons/icon-192x192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
         },
         {
-            "src": "icons/icon-512x512.png",
+            "src": "/icons/icon-512x512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
         }
     ]
 }
