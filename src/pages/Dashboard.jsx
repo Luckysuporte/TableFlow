@@ -6,13 +6,14 @@ import AccountsManager from '../components/AccountsManager';
 import WithdrawalManager from '../components/WithdrawalManager';
 import QuickActions from '../components/QuickActions';
 import RecentActivity from '../components/RecentActivity';
+import ReportsPage from '../components/ReportsPage';
 import { ActiveTablesCard, AlertsCard, WithdrawalSummaryCard } from '../components/SummaryCards';
-import { LogOut, LayoutDashboard, Monitor, Wallet, User, Settings, ChevronDown } from 'lucide-react';
+import { LogOut, LayoutDashboard, Monitor, Wallet, User, Settings, ChevronDown, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Dashboard = () => {
     const { user, logout } = useAuth();
-    const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'accounts', 'withdrawals'
+    const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'accounts', 'withdrawals', 'reports'
     const [showUserMenu, setShowUserMenu] = useState(false);
 
     return (
@@ -107,7 +108,8 @@ const Dashboard = () => {
                     {[
                         { id: 'overview', label: 'Visão Geral', icon: <LayoutDashboard size={18} />, color: '#00d2ff' },
                         { id: 'accounts', label: 'Mesas', icon: <Monitor size={18} />, color: '#a855f7' },
-                        { id: 'withdrawals', label: 'Gestão de Saque', icon: <Wallet size={18} />, color: '#dc2430' }
+                        { id: 'withdrawals', label: 'Gestão de Saque', icon: <Wallet size={18} />, color: '#dc2430' },
+                        { id: 'reports', label: 'Relatórios', icon: <FileText size={18} />, color: '#10b981' }
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -141,9 +143,6 @@ const Dashboard = () => {
                         </button>
                     ))}
                 </div>
-
-                {/* Quick Actions Panel */}
-
 
                 {/* Tab Content */}
                 <AnimatePresence mode="wait">
@@ -196,6 +195,18 @@ const Dashboard = () => {
                             transition={{ duration: 0.3 }}
                         >
                             <WithdrawalManager />
+                        </motion.div>
+                    )}
+
+                    {activeTab === 'reports' && (
+                        <motion.div
+                            key="reports"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <ReportsPage />
                         </motion.div>
                     )}
                 </AnimatePresence>

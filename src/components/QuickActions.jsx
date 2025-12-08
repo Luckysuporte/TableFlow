@@ -21,7 +21,7 @@ const QuickActions = ({ setActiveTab }) => {
             label: 'Ver Relatórios',
             icon: <FileText size={24} />,
             color: '#ffffff',
-            onClick: () => setActiveTab('overview')
+            onClick: () => setActiveTab('reports')
         }
     ];
 
