@@ -104,7 +104,23 @@ const Dashboard = () => {
 
             <main className="container" style={{ marginTop: '40px' }}>
                 {/* Tabs Navigation */}
-                <div style={{ display: 'flex', gap: '30px', marginBottom: '30px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0px' }}>
+                <div
+                    className="hide-scrollbar"
+                    style={{
+                        display: 'flex',
+                        gap: '20px',
+                        marginBottom: '30px',
+                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                        paddingBottom: '0px',
+                        overflowX: 'auto',
+                        whiteSpace: 'nowrap',
+                        WebkitOverflowScrolling: 'touch', // smooth scrolling on iOS
+                        marginLeft: '-15px', // expand to edges on mobile
+                        marginRight: '-15px',
+                        paddingLeft: '15px',
+                        paddingRight: '15px'
+                    }}
+                >
                     {[
                         { id: 'overview', label: 'Visão Geral', icon: <LayoutDashboard size={18} />, color: '#00d2ff' },
                         { id: 'accounts', label: 'Mesas', icon: <Monitor size={18} />, color: '#a855f7' },
@@ -127,7 +143,8 @@ const Dashboard = () => {
                                 alignItems: 'center',
                                 gap: '8px',
                                 transition: 'all 0.3s ease',
-                                position: 'relative'
+                                position: 'relative',
+                                flexShrink: 0 // Prevent shrinking
                             }}
                         >
                             {tab.icon} {tab.label}

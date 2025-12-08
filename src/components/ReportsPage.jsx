@@ -21,13 +21,23 @@ const ReportsPage = () => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
             {/* Sub-navigation */}
-            <div style={{
-                display: 'flex',
-                gap: '15px',
-                overflowX: 'auto',
-                paddingBottom: '10px',
-                borderBottom: '1px solid rgba(255,255,255,0.05)'
-            }}>
+            <div
+                className="hide-scrollbar"
+                style={{
+                    display: 'flex',
+                    gap: '15px',
+                    overflowX: 'auto',
+                    paddingBottom: '10px',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    whiteSpace: 'nowrap',
+                    flexWrap: 'nowrap', // Force single line
+                    WebkitOverflowScrolling: 'touch',
+                    marginLeft: '-10px',
+                    marginRight: '-10px',
+                    paddingLeft: '10px',
+                    paddingRight: '10px'
+                }}
+            >
                 {reports.map(report => (
                     <button
                         key={report.id}
@@ -36,7 +46,7 @@ const ReportsPage = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
-                            padding: '12px 20px',
+                            padding: '10px 16px', // Slightly smaller padding for mobile
                             borderRadius: '8px',
                             border: activeReport === report.id
                                 ? `1px solid ${report.color}`
@@ -46,11 +56,12 @@ const ReportsPage = () => {
                                 : 'transparent',
                             color: activeReport === report.id ? report.color : 'rgba(255,255,255,0.7)',
                             cursor: 'pointer',
-                            fontSize: '0.95rem',
+                            fontSize: '0.9rem',
                             fontWeight: activeReport === report.id ? '600' : 'normal',
                             transition: 'all 0.3s',
                             whiteSpace: 'nowrap',
-                            position: 'relative'
+                            position: 'relative',
+                            flexShrink: 0
                         }}
                         className="hover-neon"
                     >

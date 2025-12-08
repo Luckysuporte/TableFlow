@@ -165,6 +165,31 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   }
 }
 
+
 .animate-float {
   animation: float 6s ease-in-out infinite;
+}
+
+/* Scrollbar Hiding Utility */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 15px;
+  }
+
+  /* Adjust font sizes for mobile if needed */
+  html {
+    font-size: 14px;
+  }
 }
