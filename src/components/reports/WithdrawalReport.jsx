@@ -1,23 +1,34 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import Card from '../Card';
 import ExportButton from './ExportButton';
 import { useReportData } from '../../hooks/useReportData';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { DollarSign, TrendingUp, Percent, Calendar } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 
 const WithdrawalReport = () => {
     const { withdrawals, accounts, goal } = useReportData();
+    const [selectedAccountId, setSelectedAccountId] = useState('all');
 
-    // Calculate totals
-    const totalGross = withdrawals.reduce((acc, w) => acc + Number(w.grossAmount || w.gross_amount || 0), 0);
-    const totalNet = withdrawals.reduce((acc, w) => acc + Number(w.netAmount || w.net_amount || 0), 0);
+    // Filter withdrawals by selected account
+    const filteredWithdrawals = useMemo(() => {
+        if (selectedAccountId === 'all') {
+            return withdrawals;
+        }
+        return withdrawals.filter(w =>
+            (w.accountId || w.account_id) === selectedAccountId
+        );
+    }, [withdrawals, selectedAccountId]);
+
+    // Calculate totals based on filtered data
+    const totalGross = filteredWithdrawals.reduce((acc, w) => acc + Number(w.grossAmount || w.gross_amount || 0), 0);
+    const totalNet = filteredWithdrawals.reduce((acc, w) => acc + Number(w.netAmount || w.net_amount || 0), 0);
     const totalTax = totalGross - totalNet;
     const goalProgress = goal.amount > 0 ? (totalNet / goal.amount) * 100 : 0;
 
-    // Group by month
+    // Group by month using filtered data
     const monthlyData = {};
-    withdrawals.forEach(w => {
+    filteredWithdrawals.forEach(w => {
         const month = format(new Date(w.date), 'MM/yyyy');
         if (!monthlyData[month]) {
             monthlyData[month] = { gross: 0, net: 0 };
@@ -43,11 +54,46 @@ const WithdrawalReport = () => {
                     <p style={{ color: 'rgba(255,255,255,0.6)' }}>Histórico e análise de retiradas</p>
                 </div>
                 <ExportButton
-                    data={{ withdrawals, accounts }}
+                    data={{ withdrawals: filteredWithdrawals, accounts }}
                     reportType="withdrawals"
                     reportTitle="Relatório de Saques"
                 />
             </div>
+
+            {/* Account Selector */}
+            <Card>
+                <label style={{ display: 'block', marginBottom: '10px', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>
+                    Selecionar Mesa
+                </label>
+                <select
+                    value={selectedAccountId}
+                    onChange={(e) => setSelectedAccountId(e.target.value)}
+                    style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        background: 'rgba(255,255,255,0.05)',
+                        color: 'white',
+                        fontSize: '1rem',
+                        cursor: 'pointer',
+                        outline: 'none'
+                    }}
+                >
+                    <option value="all" style={{ background: '#1a1a2e', color: 'white' }}>
+                        Todas as Mesas
+                    </option>
+                    {accounts.map(account => (
+                        <option
+                            key={account.id}
+                            value={account.id}
+                            style={{ background: '#1a1a2e', color: 'white' }}
+                        >
+                            {account.name}
+                        </option>
+                    ))}
+                </select>
+            </Card>
 
             {/* Summary Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
@@ -157,14 +203,17 @@ const WithdrawalReport = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {withdrawals.length === 0 ? (
+                            {filteredWithdrawals.length === 0 ? (
                                 <tr>
                                     <td colSpan="5" style={{ padding: '30px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
-                                        Nenhum saque registrado ainda
+                                        {selectedAccountId === 'all'
+                                            ? 'Nenhum saque registrado ainda'
+                                            : 'Nenhum saque registrado para esta mesa'
+                                        }
                                     </td>
                                 </tr>
                             ) : (
-                                withdrawals.map((withdrawal, index) => {
+                                filteredWithdrawals.map((withdrawal, index) => {
                                     const account = accounts.find(a => a.id === withdrawal.accountId || a.id === withdrawal.account_id);
 
                                     return (
