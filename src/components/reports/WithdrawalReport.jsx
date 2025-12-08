@@ -2,7 +2,7 @@ import React from 'react';
 import Card from '../Card';
 import ExportButton from './ExportButton';
 import { useReportData } from '../../hooks/useReportData';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { DollarSign, TrendingUp, Percent, Calendar } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
