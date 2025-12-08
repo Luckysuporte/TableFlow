@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Ícones TableFlow</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background: #0f0c29;
+            color: white;
+            text-align: center;
+        }
+
+        canvas {
+            border: 2px solid #8B5CF6;
+            margin: 20px;
+            border-radius: 20px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #8B5CF6, #06B6D4);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        .preview {
+            display: inline-block;
+            margin: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🎨 Gerador de Ícones TableFlow PWA</h1>
+    <p>Clique nos botões abaixo para baixar os ícones</p>
+
+    <div class="preview">
+        <h3>Ícone 192x192</h3>
+        <canvas id="canvas192" width="192" height="192"></canvas>
+        <br>
+        <button onclick="downloadIcon(192)">📥 Baixar 192x192</button>
+    </div>
+
+    <div class="preview">
+        <h3>Ícone 512x512</h3>
+        <canvas id="canvas512" width="512" height="512"></canvas>
+        <br>
+        <button onclick="downloadIcon(512)">📥 Baixar 512x512</button>
+    </div>
+
+    <script>
+        function createIcon(size) {
+            const canvas = document.getElementById(`canvas${size}`);
+            const ctx = canvas.getContext('2d');
+
+            // Criar gradiente de fundo (roxo para azul)
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#8B5CF6');    // Roxo
+            gradient.addColorStop(1, '#06B6D4');    // Azul ciano
+
+            // Desenhar fundo com cantos arredondados
+            const cornerRadius = size * 0.15; // 15% do tamanho
+            ctx.fillStyle = gradient;
+            roundRect(ctx, 0, 0, size, size, cornerRadius);
+            ctx.fill();
+
+            // Configurar para desenhar os quadrados brancos
+            ctx.fillStyle = 'white';
+
+            // Tamanhos proporcionais
+            const squareSize = size * 0.15;      // Tamanho de cada quadrado
+            const gap = size * 0.05;              // Espaço entre quadrados
+            const squareRadius = size * 0.03;     // Arredondamento dos cantos
+
+            // Calcular posição central do grid 2x2
+            const totalGridSize = (squareSize * 2) + gap;
+            const startX = (size - totalGridSize) / 2;
+            const startY = (size - totalGridSize) / 2;
+
+            // Desenhar 4 quadrados em grid 2x2
+            const positions = [
+                [startX, startY],                                    // Top-left
+                [startX + squareSize + gap, startY],                 // Top-right
+                [startX, startY + squareSize + gap],                 // Bottom-left
+                [startX + squareSize + gap, startY + squareSize + gap] // Bottom-right
+            ];
+
+            positions.forEach(([x, y]) => {
+                roundRect(ctx, x, y, squareSize, squareSize, squareRadius);
+                ctx.fill();
+            });
+        }
+
+        // Função auxiliar para desenhar retângulos com cantos arredondados
+        function roundRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+
+        function downloadIcon(size) {
+            const canvas = document.getElementById(`canvas${size}`);
+            const link = document.createElement('a');
+            link.download = `icon-${size}x${size}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Gerar os ícones ao carregar a página
+        window.onload = () => {
+            createIcon(192);
+            createIcon(512);
+        };
+    </script>
+</body>
+
+</html>
