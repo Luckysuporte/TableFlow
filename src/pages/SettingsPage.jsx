@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -43,6 +43,71 @@ const SettingsPage = ({ onClose }) => {
         twoFactorAuth: false,
         sessionTimeout: '30min'
     });
+
+    // Load settings on mount
+    useEffect(() => {
+        loadSettings();
+    }, [user]);
+
+    const loadSettings = async () => {
+        try {
+            // Try to load from Supabase first
+            const { data, error } = await supabase
+                .from('user_settings')
+                .select('settings')
+                .eq('user_id', user.id)
+                .single();
+
+            if (data && data.settings) {
+                setSettings(data.settings);
+            } else {
+                // Fallback to localStorage
+                const savedSettings = localStorage.getItem(`settings_${user.id}`);
+                if (savedSettings) {
+                    setSettings(JSON.parse(savedSettings));
+                }
+            }
+        } catch (error) {
+            console.error('Error loading settings:', error);
+            // Try localStorage as fallback
+            const savedSettings = localStorage.getItem(`settings_${user.id}`);
+            if (savedSettings) {
+                setSettings(JSON.parse(savedSettings));
+            }
+        }
+    };
+
+    const saveSettings = async () => {
+        setLoading(true);
+        try {
+            // Save to localStorage immediately
+            localStorage.setItem(`settings_${user.id}`, JSON.stringify(settings));
+
+            // Try to save to Supabase
+            const { error } = await supabase
+                .from('user_settings')
+                .upsert({
+                    user_id: user.id,
+                    settings: settings,
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'user_id'
+                });
+
+            if (error) {
+                console.error('Error saving to Supabase:', error);
+                // Settings are still saved in localStorage
+            }
+
+            alert('Configurações salvas com sucesso!');
+            onClose();
+        } catch (error) {
+            console.error('Error saving settings:', error);
+            alert('Erro ao salvar configurações');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handlePasswordChange = async () => {
         if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -576,10 +641,8 @@ const SettingsPage = ({ onClose }) => {
                         Cancelar
                     </button>
                     <button
-                        onClick={() => {
-                            alert('Configurações salvas com sucesso!');
-                            onClose();
-                        }}
+                        onClick={saveSettings}
+                        disabled={loading}
                         style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -589,14 +652,15 @@ const SettingsPage = ({ onClose }) => {
                             borderRadius: '8px',
                             padding: '10px 20px',
                             color: 'white',
-                            cursor: 'pointer',
+                            cursor: loading ? 'not-allowed' : 'pointer',
                             fontSize: '0.95rem',
-                            fontWeight: '600'
+                            fontWeight: '600',
+                            opacity: loading ? 0.7 : 1
                         }}
                         className="hover-neon"
                     >
                         <Save size={18} />
-                        Salvar Alterações
+                        {loading ? 'Salvando...' : 'Salvar Alterações'}
                     </button>
                 </div>
             </motion.div>
