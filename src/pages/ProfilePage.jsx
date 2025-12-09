@@ -12,7 +12,9 @@ const ProfilePage = ({ onClose }) => {
     const { user } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [stats, setStats] = useState(null);
+    const [avatarUrl, setAvatarUrl] = useState(user?.user_metadata?.avatar_url || null);
     const [profileData, setProfileData] = useState({
         name: user?.user_metadata?.name || '',
         email: user?.email || '',
@@ -22,7 +24,18 @@ const ProfilePage = ({ onClose }) => {
 
     useEffect(() => {
         fetchUserStats();
+        loadAvatar();
     }, []);
+
+    const loadAvatar = async () => {
+        try {
+            if (user?.user_metadata?.avatar_url) {
+                setAvatarUrl(user.user_metadata.avatar_url);
+            }
+        } catch (error) {
+            console.error('Error loading avatar:', error);
+        }
+    };
 
     const fetchUserStats = async () => {
         try {
@@ -59,6 +72,63 @@ const ProfilePage = ({ onClose }) => {
             });
         } catch (error) {
             console.error('Error fetching stats:', error);
+        }
+    };
+
+    const handlePhotoUpload = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('Por favor, selecione uma imagem válida');
+            return;
+        }
+
+        // Validate file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            alert('A imagem deve ter no máximo 2MB');
+            return;
+        }
+
+        setUploadingPhoto(true);
+        try {
+            // Create unique filename
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+            const filePath = `avatars/${fileName}`;
+
+            // Upload to Supabase Storage
+            const { error: uploadError } = await supabase.storage
+                .from('profile-photos')
+                .upload(filePath, file, {
+                    cacheControl: '3600',
+                    upsert: true
+                });
+
+            if (uploadError) throw uploadError;
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('profile-photos')
+                .getPublicUrl(filePath);
+
+            // Update user metadata
+            const { error: updateError } = await supabase.auth.updateUser({
+                data: {
+                    avatar_url: publicUrl
+                }
+            });
+
+            if (updateError) throw updateError;
+
+            setAvatarUrl(publicUrl);
+            alert('Foto de perfil atualizada com sucesso!');
+        } catch (error) {
+            console.error('Error uploading photo:', error);
+            alert('Erro ao fazer upload da foto. Tente novamente.');
+        } finally {
+            setUploadingPhoto(false);
         }
     };
 
@@ -161,36 +231,89 @@ const ProfilePage = ({ onClose }) => {
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
                         <div style={{ position: 'relative' }}>
+                            {/* Hidden file input */}
+                            <input
+                                type="file"
+                                id="avatar-upload"
+                                accept="image/*"
+                                onChange={handlePhotoUpload}
+                                style={{ display: 'none' }}
+                            />
+
+                            {/* Avatar */}
                             <div style={{
                                 width: '100px',
                                 height: '100px',
                                 borderRadius: '50%',
-                                background: 'linear-gradient(135deg, #a855f7, #ec4899)',
+                                background: avatarUrl ? 'transparent' : 'linear-gradient(135deg, #a855f7, #ec4899)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '2.5rem',
                                 fontWeight: 'bold',
                                 color: 'white',
-                                border: '4px solid white'
+                                border: '4px solid white',
+                                overflow: 'hidden',
+                                position: 'relative'
                             }}>
-                                {(profileData.name || user?.email || 'U').charAt(0).toUpperCase()}
+                                {avatarUrl ? (
+                                    <img
+                                        src={avatarUrl}
+                                        alt="Avatar"
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover'
+                                        }}
+                                    />
+                                ) : (
+                                    (profileData.name || user?.email || 'U').charAt(0).toUpperCase()
+                                )}
+
+                                {/* Loading overlay */}
+                                {uploadingPhoto && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        background: 'rgba(0,0,0,0.7)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: 'white',
+                                        fontSize: '0.8rem'
+                                    }}>
+                                        Enviando...
+                                    </div>
+                                )}
                             </div>
-                            <button style={{
-                                position: 'absolute',
-                                bottom: '0',
-                                right: '0',
-                                background: 'white',
-                                border: 'none',
-                                borderRadius: '50%',
-                                width: '32px',
-                                height: '32px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
-                            }}>
+
+                            {/* Camera button */}
+                            <button
+                                onClick={() => document.getElementById('avatar-upload').click()}
+                                disabled={uploadingPhoto}
+                                style={{
+                                    position: 'absolute',
+                                    bottom: '0',
+                                    right: '0',
+                                    background: 'white',
+                                    border: 'none',
+                                    borderRadius: '50%',
+                                    width: '32px',
+                                    height: '32px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: uploadingPhoto ? 'not-allowed' : 'pointer',
+                                    boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+                                    opacity: uploadingPhoto ? 0.5 : 1,
+                                    transition: 'all 0.3s'
+                                }}
+                                className="hover-neon"
+                                title="Alterar foto de perfil"
+                            >
                                 <Camera size={16} color="#3a7bd5" />
                             </button>
                         </div>
