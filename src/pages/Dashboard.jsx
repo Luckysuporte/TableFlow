@@ -7,6 +7,8 @@ import WithdrawalManager from '../components/WithdrawalManager';
 import QuickActions from '../components/QuickActions';
 import RecentActivity from '../components/RecentActivity';
 import ReportsPage from '../components/ReportsPage';
+import ProfilePage from './ProfilePage';
+import SettingsPage from './SettingsPage';
 import { ActiveTablesCard, AlertsCard, WithdrawalSummaryCard } from '../components/SummaryCards';
 import { LogOut, LayoutDashboard, Monitor, Wallet, User, Settings, ChevronDown, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,6 +17,8 @@ const Dashboard = () => {
     const { user, logout } = useAuth();
     const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'accounts', 'withdrawals', 'reports'
     const [showUserMenu, setShowUserMenu] = useState(false);
+    const [showProfile, setShowProfile] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
 
     return (
         <div style={{ minHeight: '100vh', paddingBottom: '40px' }}>
@@ -84,10 +88,24 @@ const Dashboard = () => {
                                     }}
                                 >
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                        <button style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '8px', background: 'transparent', color: 'white', cursor: 'pointer', border: 'none', textAlign: 'left' }} className="hover-neon">
+                                        <button
+                                            onClick={() => {
+                                                setShowProfile(true);
+                                                setShowUserMenu(false);
+                                            }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '8px', background: 'transparent', color: 'white', cursor: 'pointer', border: 'none', textAlign: 'left' }}
+                                            className="hover-neon"
+                                        >
                                             <User size={16} /> Perfil
                                         </button>
-                                        <button style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '8px', background: 'transparent', color: 'white', cursor: 'pointer', border: 'none', textAlign: 'left' }} className="hover-neon">
+                                        <button
+                                            onClick={() => {
+                                                setShowSettings(true);
+                                                setShowUserMenu(false);
+                                            }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '8px', background: 'transparent', color: 'white', cursor: 'pointer', border: 'none', textAlign: 'left' }}
+                                            className="hover-neon"
+                                        >
                                             <Settings size={16} /> Configurações
                                         </button>
                                         <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '5px 0' }}></div>
@@ -228,6 +246,16 @@ const Dashboard = () => {
                     )}
                 </AnimatePresence>
             </main>
+
+            {/* Profile Modal */}
+            <AnimatePresence>
+                {showProfile && <ProfilePage onClose={() => setShowProfile(false)} />}
+            </AnimatePresence>
+
+            {/* Settings Modal */}
+            <AnimatePresence>
+                {showSettings && <SettingsPage onClose={() => setShowSettings(false)} />}
+            </AnimatePresence>
         </div>
     );
 };
