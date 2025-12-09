@@ -98,20 +98,30 @@ const ProfilePage = ({ onClose }) => {
             const fileName = `${user.id}-${Date.now()}.${fileExt}`;
             const filePath = `avatars/${fileName}`;
 
+            console.log('Uploading file:', filePath);
+
             // Upload to Supabase Storage
-            const { error: uploadError } = await supabase.storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
                 .from('profile-photos')
                 .upload(filePath, file, {
                     cacheControl: '3600',
                     upsert: true
                 });
 
-            if (uploadError) throw uploadError;
+            if (uploadError) {
+                console.error('Upload error:', uploadError);
+                throw new Error(`Erro no upload: ${uploadError.message}`);
+            }
+
+            console.log('Upload successful:', uploadData);
 
             // Get public URL
-            const { data: { publicUrl } } = supabase.storage
+            const { data: urlData } = supabase.storage
                 .from('profile-photos')
                 .getPublicUrl(filePath);
+
+            const publicUrl = urlData.publicUrl;
+            console.log('Public URL:', publicUrl);
 
             // Update user metadata
             const { error: updateError } = await supabase.auth.updateUser({
@@ -120,15 +130,20 @@ const ProfilePage = ({ onClose }) => {
                 }
             });
 
-            if (updateError) throw updateError;
+            if (updateError) {
+                console.error('Update error:', updateError);
+                throw new Error(`Erro ao atualizar perfil: ${updateError.message}`);
+            }
 
             setAvatarUrl(publicUrl);
             alert('Foto de perfil atualizada com sucesso!');
         } catch (error) {
             console.error('Error uploading photo:', error);
-            alert('Erro ao fazer upload da foto. Tente novamente.');
+            alert(error.message || 'Erro ao fazer upload da foto. Tente novamente.');
         } finally {
             setUploadingPhoto(false);
+            // Reset file input
+            event.target.value = '';
         }
     };
 
