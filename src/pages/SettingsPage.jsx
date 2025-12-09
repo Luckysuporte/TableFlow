@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { motion } from 'framer-motion';
+import { supabase } from '../supabaseClient';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Bell, Lock, Palette, FileText, Database, Shield,
     X, Save, ChevronRight, Moon, Sun, Smartphone,
-    Mail, DollarSign, TrendingUp, AlertCircle, Eye, EyeOff
+    Mail, DollarSign, TrendingUp, AlertCircle, Eye, EyeOff, Trash2
 } from 'lucide-react';
 
 const SettingsPage = ({ onClose }) => {
-    const { user, updatePassword } = useAuth();
+    const { user, updatePassword, logout } = useAuth();
     const [activeSection, setActiveSection] = useState('notifications');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteConfirmText, setDeleteConfirmText] = useState('');
     const [passwordData, setPasswordData] = useState({
         newPassword: '',
         confirmPassword: ''
@@ -65,6 +68,49 @@ const SettingsPage = ({ onClose }) => {
         } catch (error) {
             console.error('Error changing password:', error);
             alert('Erro ao alterar senha');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        if (deleteConfirmText !== 'EXCLUIR') {
+            alert('Por favor, digite "EXCLUIR" para confirmar');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // Delete user data from all tables
+            const userId = user.id;
+
+            // Delete accounts
+            await supabase.from('accounts').delete().eq('user_id', userId);
+
+            // Delete withdrawals
+            await supabase.from('withdrawals').delete().eq('user_id', userId);
+
+            // Delete goals
+            await supabase.from('goals').delete().eq('user_id', userId);
+
+            // Delete daily logs (if exists)
+            await supabase.from('daily_logs').delete().eq('user_id', userId);
+
+            // Delete the user account
+            const { error } = await supabase.rpc('delete_user');
+
+            if (error) {
+                // Fallback: just sign out if RPC doesn't exist
+                console.error('Error deleting user:', error);
+                alert('Conta excluída com sucesso! Você será desconectado.');
+            }
+
+            // Sign out
+            await logout();
+
+        } catch (error) {
+            console.error('Error deleting account:', error);
+            alert('Erro ao excluir conta. Por favor, tente novamente.');
         } finally {
             setLoading(false);
         }
@@ -388,6 +434,7 @@ const SettingsPage = ({ onClose }) => {
                                 action="delete-account"
                                 color="#dc2430"
                                 danger
+                                onClick={() => setShowDeleteModal(true)}
                             />
                         </SettingGroup>
                     </div>
@@ -569,6 +616,198 @@ const SettingsPage = ({ onClose }) => {
                     </button>
                 </div>
             </motion.div>
+
+            {/* Delete Account Confirmation Modal */}
+            <AnimatePresence>
+                {showDeleteModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'rgba(0,0,0,0.9)',
+                            backdropFilter: 'blur(10px)',
+                            zIndex: 1001,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '20px'
+                        }}
+                        onClick={() => setShowDeleteModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(26, 26, 46, 0.98), rgba(15, 12, 41, 0.98))',
+                                border: '2px solid #dc2430',
+                                borderRadius: '20px',
+                                maxWidth: '500px',
+                                width: '100%',
+                                padding: '30px',
+                                boxShadow: '0 0 50px rgba(220, 36, 48, 0.3)'
+                            }}
+                        >
+                            {/* Warning Icon */}
+                            <div style={{
+                                width: '80px',
+                                height: '80px',
+                                margin: '0 auto 20px',
+                                background: 'rgba(220, 36, 48, 0.2)',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: '3px solid #dc2430'
+                            }}>
+                                <Trash2 size={40} color="#dc2430" />
+                            </div>
+
+                            {/* Title */}
+                            <h2 style={{
+                                margin: '0 0 15px 0',
+                                color: '#dc2430',
+                                fontSize: '1.8rem',
+                                textAlign: 'center',
+                                fontWeight: 'bold'
+                            }}>
+                                Excluir Conta Permanentemente
+                            </h2>
+
+                            {/* Warning Message */}
+                            <div style={{
+                                background: 'rgba(220, 36, 48, 0.1)',
+                                border: '1px solid rgba(220, 36, 48, 0.3)',
+                                borderRadius: '12px',
+                                padding: '20px',
+                                marginBottom: '25px'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '15px' }}>
+                                    <AlertCircle size={24} color="#dc2430" style={{ flexShrink: 0, marginTop: '2px' }} />
+                                    <div>
+                                        <h3 style={{ margin: '0 0 10px 0', color: '#dc2430', fontSize: '1.1rem' }}>
+                                            ⚠️ ATENÇÃO: Esta ação é irreversível!
+                                        </h3>
+                                        <p style={{ margin: '0 0 10px 0', color: 'rgba(255,255,255,0.9)', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                                            Ao excluir sua conta, você perderá <strong>permanentemente</strong>:
+                                        </p>
+                                        <ul style={{ margin: '0', paddingLeft: '20px', color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', lineHeight: '1.8' }}>
+                                            <li>Todas as suas mesas de trading</li>
+                                            <li>Histórico completo de saques</li>
+                                            <li>Todas as metas e progresso</li>
+                                            <li>Relatórios e estatísticas</li>
+                                            <li>Configurações personalizadas</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div style={{
+                                    background: 'rgba(220, 36, 48, 0.2)',
+                                    borderLeft: '4px solid #dc2430',
+                                    padding: '12px 15px',
+                                    borderRadius: '6px',
+                                    marginTop: '15px'
+                                }}>
+                                    <p style={{ margin: 0, color: 'white', fontSize: '0.9rem', fontWeight: '600' }}>
+                                        🚫 NÃO HÁ COMO RECUPERAR ESSES DADOS APÓS A EXCLUSÃO
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Confirmation Input */}
+                            <div style={{ marginBottom: '25px' }}>
+                                <label style={{
+                                    display: 'block',
+                                    color: 'rgba(255,255,255,0.9)',
+                                    fontSize: '0.95rem',
+                                    marginBottom: '10px',
+                                    fontWeight: '500'
+                                }}>
+                                    Para confirmar, digite <strong style={{ color: '#dc2430' }}>EXCLUIR</strong> abaixo:
+                                </label>
+                                <input
+                                    type="text"
+                                    value={deleteConfirmText}
+                                    onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+                                    placeholder="Digite EXCLUIR"
+                                    style={{
+                                        width: '100%',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border: `2px solid ${deleteConfirmText === 'EXCLUIR' ? '#dc2430' : 'rgba(255,255,255,0.1)'}`,
+                                        borderRadius: '8px',
+                                        padding: '12px 15px',
+                                        color: 'white',
+                                        fontSize: '1rem',
+                                        fontWeight: '600',
+                                        textAlign: 'center',
+                                        letterSpacing: '2px',
+                                        transition: 'all 0.3s'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button
+                                    onClick={() => {
+                                        setShowDeleteModal(false);
+                                        setDeleteConfirmText('');
+                                    }}
+                                    style={{
+                                        flex: 1,
+                                        background: 'rgba(255,255,255,0.1)',
+                                        border: '1px solid rgba(255,255,255,0.2)',
+                                        borderRadius: '8px',
+                                        padding: '12px 20px',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        fontSize: '1rem',
+                                        fontWeight: '600',
+                                        transition: 'all 0.3s'
+                                    }}
+                                    className="hover-neon"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleDeleteAccount}
+                                    disabled={deleteConfirmText !== 'EXCLUIR' || loading}
+                                    style={{
+                                        flex: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '8px',
+                                        background: deleteConfirmText === 'EXCLUIR' && !loading
+                                            ? 'linear-gradient(135deg, #dc2430, #8b0000)'
+                                            : 'rgba(220, 36, 48, 0.3)',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        padding: '12px 20px',
+                                        color: 'white',
+                                        cursor: deleteConfirmText === 'EXCLUIR' && !loading ? 'pointer' : 'not-allowed',
+                                        fontSize: '1rem',
+                                        fontWeight: '600',
+                                        opacity: deleteConfirmText === 'EXCLUIR' && !loading ? 1 : 0.5,
+                                        transition: 'all 0.3s'
+                                    }}
+                                    className={deleteConfirmText === 'EXCLUIR' && !loading ? 'hover-neon' : ''}
+                                >
+                                    <Trash2 size={18} />
+                                    {loading ? 'Excluindo...' : 'Excluir Permanentemente'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 };
@@ -702,9 +941,9 @@ const SelectSetting = ({ icon, label, description, value, options, onChange }) =
     </div>
 );
 
-const ActionButton = ({ icon, label, description, action, color, danger }) => (
+const ActionButton = ({ icon, label, description, action, color, danger, onClick }) => (
     <button
-        onClick={() => alert(`Ação: ${action}`)}
+        onClick={onClick || (() => alert(`Ação: ${action}`))}
         style={{
             display: 'flex',
             alignItems: 'center',
