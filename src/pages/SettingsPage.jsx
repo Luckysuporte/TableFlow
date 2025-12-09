@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Bell, Lock, Palette, FileText, Database, Shield,
-    X, Save, ChevronRight, Moon, Sun, Smartphone,
+    X, Save, ChevronRight, Smartphone,
     Mail, DollarSign, TrendingUp, AlertCircle, Eye, EyeOff, Trash2
 } from 'lucide-react';
 
@@ -31,7 +31,6 @@ const SettingsPage = ({ onClose }) => {
         weeklyReports: true,
 
         // Appearance
-        theme: 'dark',
         compactMode: false,
         animations: true,
 
@@ -196,21 +195,6 @@ const SettingsPage = ({ onClose }) => {
                             title="Aparência"
                             description="Personalize a interface do sistema"
                         />
-
-                        <SettingGroup title="Tema">
-                            <SelectSetting
-                                icon={<Moon size={18} />}
-                                label="Modo de Cor"
-                                description="Escolha entre tema claro ou escuro"
-                                value={settings.theme}
-                                options={[
-                                    { value: 'dark', label: 'Escuro' },
-                                    { value: 'light', label: 'Claro' },
-                                    { value: 'auto', label: 'Automático' }
-                                ]}
-                                onChange={(value) => setSettings({ ...settings, theme: value })}
-                            />
-                        </SettingGroup>
 
                         <SettingGroup title="Interface">
                             <ToggleSetting
