@@ -65,8 +65,31 @@ const Dashboard = () => {
                             }}
                             className="hover-neon"
                         >
-                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #00d2ff, #3a7bd5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white' }}>
-                                {(user?.user_metadata?.name || user?.email || 'U').charAt(0).toUpperCase()}
+                            <div style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                background: user?.user_metadata?.avatar_url ? 'transparent' : 'linear-gradient(135deg, #00d2ff, #3a7bd5)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 'bold',
+                                color: 'white',
+                                overflow: 'hidden'
+                            }}>
+                                {user?.user_metadata?.avatar_url ? (
+                                    <img
+                                        src={user.user_metadata.avatar_url}
+                                        alt="Avatar"
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover'
+                                        }}
+                                    />
+                                ) : (
+                                    (user?.user_metadata?.name || user?.email || 'U').charAt(0).toUpperCase()
+                                )}
                             </div>
                             <span style={{ color: 'white', fontSize: '0.9rem' }}>{user?.user_metadata?.name || user?.email}</span>
                             <ChevronDown size={16} color="rgba(255,255,255,0.5)" />
