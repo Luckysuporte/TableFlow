@@ -284,6 +284,8 @@ export const DataProvider = ({ children }) => {
 
     const addAccount = async (account) => {
         try {
+            console.log('Tentando adicionar conta:', account);
+
             const { data, error } = await supabase
                 .from('accounts')
                 .insert([
@@ -301,11 +303,17 @@ export const DataProvider = ({ children }) => {
 
             if (error) {
                 console.error('Error adding account:', error);
+                alert(`Erro ao adicionar conta: ${error.message}`);
+                return false;
             } else {
+                console.log('Conta adicionada com sucesso:', data);
                 setAccounts(prev => [data, ...prev]);
+                return true;
             }
         } catch (error) {
             console.error('Error adding account:', error);
+            alert(`Erro ao adicionar conta: ${error.message}`);
+            return false;
         }
     };
 

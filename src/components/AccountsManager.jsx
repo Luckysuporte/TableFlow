@@ -17,22 +17,26 @@ const AccountsManager = () => {
     const [accountNumber, setAccountNumber] = useState('');
     const [accountName, setAccountName] = useState('');
     const [accountType, setAccountType] = useState('demo'); // 'demo' or 'real'
-    const [accountPhase, setAccountPhase] = useState('1'); // '1' or '2' (only for demo)
+    const [accountPhase, setAccountPhase] = useState('1'); // '1', '2', or 'unica'
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        addAccount({
+
+        const success = await addAccount({
             number: accountNumber,
             name: accountName,
             type: accountType,
             phase: accountType === 'demo' ? accountPhase : '1', // Real accounts default to phase 1
             createdAt: new Date().toISOString()
         });
-        setShowAddForm(false);
-        setAccountNumber('');
-        setAccountName('');
-        setAccountType('demo');
-        setAccountPhase('1');
+
+        if (success) {
+            setShowAddForm(false);
+            setAccountNumber('');
+            setAccountName('');
+            setAccountType('demo');
+            setAccountPhase('1');
+        }
     };
 
     return (
