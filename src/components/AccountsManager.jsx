@@ -157,6 +157,22 @@ const AccountsManager = () => {
                                                 >
                                                     Fase 2
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAccountPhase('unica')}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '12px',
+                                                        borderRadius: '8px',
+                                                        border: accountPhase === 'unica' ? '1px solid white' : '1px solid rgba(255,255,255,0.1)',
+                                                        background: accountPhase === 'unica' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                                        color: 'white',
+                                                        cursor: 'pointer',
+                                                        whiteSpace: 'nowrap'
+                                                    }}
+                                                >
+                                                    Fase Única
+                                                </button>
                                             </div>
                                         </div>
                                     )}
@@ -220,7 +236,7 @@ const AccountsManager = () => {
                                         color: 'white',
                                         border: '1px solid rgba(255, 255, 255, 0.2)'
                                     }}>
-                                        Fase {account.phase}
+                                        {account.phase === 'unica' ? 'Fase Única' : `Fase ${account.phase}`}
                                     </span>
                                 )}
                             </div>
