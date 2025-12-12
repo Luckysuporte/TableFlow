@@ -78,19 +78,20 @@ const AccountsManager = () => {
                                 </div>
 
                                 <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                    display: 'flex',
+                                    flexDirection: 'column',
                                     gap: '20px',
                                     width: '100%'
                                 }}>
                                     <div style={{ width: '100%' }}>
                                         <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', marginBottom: '10px' }}>Tipo de Conta</label>
-                                        <div style={{ display: 'flex', gap: '10px' }}>
+                                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                                             <button
                                                 type="button"
                                                 onClick={() => setAccountType('demo')}
                                                 style={{
                                                     flex: 1,
+                                                    minWidth: '150px',
                                                     padding: '12px',
                                                     borderRadius: '8px',
                                                     border: accountType === 'demo' ? '1px solid #a855f7' : '1px solid rgba(255,255,255,0.1)',
@@ -107,6 +108,7 @@ const AccountsManager = () => {
                                                 onClick={() => setAccountType('real')}
                                                 style={{
                                                     flex: 1,
+                                                    minWidth: '150px',
                                                     padding: '12px',
                                                     borderRadius: '8px',
                                                     border: accountType === 'real' ? '1px solid #00d2ff' : '1px solid rgba(255,255,255,0.1)',
@@ -124,12 +126,13 @@ const AccountsManager = () => {
                                     {accountType === 'demo' && (
                                         <div style={{ width: '100%' }}>
                                             <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', marginBottom: '10px' }}>Fase</label>
-                                            <div style={{ display: 'flex', gap: '10px' }}>
+                                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                                                 <button
                                                     type="button"
                                                     onClick={() => setAccountPhase('1')}
                                                     style={{
                                                         flex: 1,
+                                                        minWidth: '120px',
                                                         padding: '12px',
                                                         borderRadius: '8px',
                                                         border: accountPhase === '1' ? '1px solid white' : '1px solid rgba(255,255,255,0.1)',
@@ -146,6 +149,7 @@ const AccountsManager = () => {
                                                     onClick={() => setAccountPhase('2')}
                                                     style={{
                                                         flex: 1,
+                                                        minWidth: '120px',
                                                         padding: '12px',
                                                         borderRadius: '8px',
                                                         border: accountPhase === '2' ? '1px solid white' : '1px solid rgba(255,255,255,0.1)',
@@ -162,6 +166,7 @@ const AccountsManager = () => {
                                                     onClick={() => setAccountPhase('unica')}
                                                     style={{
                                                         flex: 1,
+                                                        minWidth: '120px',
                                                         padding: '12px',
                                                         borderRadius: '8px',
                                                         border: accountPhase === 'unica' ? '1px solid white' : '1px solid rgba(255,255,255,0.1)',
