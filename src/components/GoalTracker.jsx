@@ -28,7 +28,8 @@ const GoalTracker = ({ accountId }) => {
         }
     }, [accountId, currentAccount, goal, isEditing]);
 
-    const { totalResult, remaining, progress, isGoalMet } = getSummary(accountId);
+    const { totalResult, remaining, progress, isGoalMet, currentBalance, initialBalance, currency } = getSummary(accountId);
+    const currencySymbol = (accountId && (currentAccount?.currency === 'USD' || currency === 'USD')) ? '$' : 'R$';
 
     const handleSave = () => {
         if (accountId) {
@@ -86,7 +87,7 @@ const GoalTracker = ({ accountId }) => {
                     )}
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
                         <NeonInput
-                            label="Valor da Meta (R$)"
+                            label={`Valor da Meta (${currencySymbol})`}
                             type="number"
                             value={tempGoalAmount}
                             onChange={(e) => setTempGoalAmount(e.target.value)}
@@ -120,26 +121,36 @@ const GoalTracker = ({ accountId }) => {
                         />
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '15px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '15px' }}>
+                        {/* Saldo Total se for conta individual */}
+                        {accountId && (
+                            <div style={{ background: 'rgba(0, 210, 255, 0.05)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0, 210, 255, 0.15)' }}>
+                                <div style={{ fontSize: '0.8rem', color: '#00d2ff', marginBottom: '5px' }}>Saldo Total da Conta</div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>
+                                    {currencySymbol} {currentBalance.toLocaleString()}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Main Stats */}
                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                             <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '5px' }}>Meta Total</div>
                             <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
-                                R$ {accountId ? (currentAccount?.goal || 0).toLocaleString() : Number(goal.amount).toLocaleString()}
+                                {currencySymbol} {accountId ? (currentAccount?.goal || 0).toLocaleString() : Number(goal.amount).toLocaleString()}
                             </div>
                         </div>
 
                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                             <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '5px' }}>Acumulado</div>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: totalResult > 0 ? '#00d2ff' : 'white' }}>
-                                R$ {totalResult.toLocaleString()}
+                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: totalResult > 0 ? '#00d2ff' : totalResult < 0 ? '#dc2430' : 'white' }}>
+                                {totalResult > 0 ? '+' : ''}{currencySymbol} {totalResult.toLocaleString()}
                             </div>
                         </div>
 
                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                             <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '5px' }}>Falta</div>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
-                                R$ {remaining.toLocaleString()}
+                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: isGoalMet ? '#10b981' : 'white' }}>
+                                {isGoalMet ? 'Alcançada! 🎯' : `${currencySymbol} ${remaining.toLocaleString()}`}
                             </div>
                         </div>
                     </div>

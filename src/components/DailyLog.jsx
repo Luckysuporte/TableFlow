@@ -7,10 +7,13 @@ import { Calendar, TrendingUp, TrendingDown, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const DailyLog = ({ accountId }) => {
-    const { logs, addLog, deleteLog } = useData();
+    const { logs, addLog, deleteLog, accounts } = useData();
     const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [amount, setAmount] = useState('');
     const [showForm, setShowForm] = useState(false);
+
+    const currentAccount = accounts?.find(a => a.id === accountId);
+    const currencySymbol = currentAccount?.currency === 'USD' ? '$' : 'R$';
 
     // Filter logs for this specific account
     const accountLogs = logs.filter(log => log.accountId === accountId);
@@ -59,7 +62,7 @@ const DailyLog = ({ accountId }) => {
                                 required
                             />
                             <NeonInput
-                                label="Resultado (R$)"
+                                label={`Resultado (${currencySymbol})`}
                                 type="text"
                                 inputMode="decimal"
                                 value={amount}
@@ -110,7 +113,7 @@ const DailyLog = ({ accountId }) => {
                                             })()}
                                         </td>
                                         <td style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', color: log.amount >= 0 ? '#00d2ff' : '#dc2430' }}>
-                                            R$ {log.amount.toLocaleString()}
+                                            {currencySymbol} {log.amount.toLocaleString()}
                                         </td>
                                         <td style={{ padding: '12px', textAlign: 'right' }}>
                                             {log.amount >= 0 ? (

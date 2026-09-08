@@ -96,13 +96,12 @@ export const WithdrawalSummaryCard = () => {
     const realAccounts = accounts.filter(a => a.type === 'real');
 
     const totalAvailable = realAccounts.reduce((acc, account) => {
-        const accountLogs = logs.filter(l => l.accountId === account.id);
+        const initial = Number(account.initial_balance || 0);
+        const accountLogs = logs.filter(l => l.accountId === account.id || l.account_id === account.id);
         const accountProfit = accountLogs.reduce((sum, log) => sum + Number(log.amount), 0);
-
-        const accountWithdrawals = withdrawals.filter(w => w.accountId === account.id);
-        const accountWithdrawn = accountWithdrawals.reduce((sum, w) => sum + Number(w.grossAmount), 0);
-
-        const available = accountProfit - accountWithdrawn;
+        const accountWithdrawals = withdrawals.filter(w => w.accountId === account.id || w.account_id === account.id);
+        const accountWithdrawn = accountWithdrawals.reduce((sum, w) => sum + Number(w.grossAmount || w.gross_amount || 0), 0);
+        const available = initial + accountProfit - accountWithdrawn;
         return acc + (available > 0 ? available : 0);
     }, 0);
 

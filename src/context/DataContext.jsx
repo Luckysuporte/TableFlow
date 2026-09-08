@@ -286,20 +286,45 @@ export const DataProvider = ({ children }) => {
         try {
             console.log('Tentando adicionar conta:', account);
 
-            const { data, error } = await supabase
+            const accountPayload = {
+                user_id: user.id,
+                number: account.number,
+                name: account.name,
+                type: account.type,
+                phase: account.phase,
+                goal: account.goal !== undefined && account.goal !== '' ? Number(account.goal) : 0,
+                initial_balance: account.initial_balance !== undefined && account.initial_balance !== '' ? Number(account.initial_balance) : 0,
+                currency: account.currency || 'BRL'
+            };
+
+            let { data, error } = await supabase
                 .from('accounts')
-                .insert([
-                    {
-                        user_id: user.id,
-                        number: account.number,
-                        name: account.name,
-                        type: account.type,
-                        phase: account.phase,
-                        goal: account.goal
-                    }
-                ])
+                .insert([accountPayload])
                 .select()
                 .single();
+
+            // Se a coluna ainda não foi criada no Supabase pelo usuário, fazer fallback seguro
+            if (error && (error.message?.includes('initial_balance') || error.message?.includes('currency'))) {
+                console.warn('Colunas initial_balance/currency ainda não criadas no Supabase. Salvando campos padrão.');
+                const fallbackPayload = {
+                    user_id: user.id,
+                    number: account.number,
+                    name: account.name,
+                    type: account.type,
+                    phase: account.phase,
+                    goal: accountPayload.goal
+                };
+                const retry = await supabase.from('accounts').insert([fallbackPayload]).select().single();
+                if (retry.error) {
+                    throw retry.error;
+                }
+                data = {
+                    ...retry.data,
+                    initial_balance: accountPayload.initial_balance,
+                    currency: accountPayload.currency
+                };
+                error = null;
+            }
 
             if (error) {
                 console.error('Error adding account:', error);
@@ -319,19 +344,45 @@ export const DataProvider = ({ children }) => {
 
     const updateAccount = async (id, updatedData) => {
         try {
-            const { error } = await supabase
+            let updatePayload = { ...updatedData };
+            if (updatePayload.goal !== undefined && updatePayload.goal !== null && updatePayload.goal !== '') {
+                updatePayload.goal = Number(updatePayload.goal);
+            }
+            if (updatePayload.initial_balance !== undefined && updatePayload.initial_balance !== null && updatePayload.initial_balance !== '') {
+                updatePayload.initial_balance = Number(updatePayload.initial_balance);
+            }
+
+            let { error } = await supabase
                 .from('accounts')
-                .update(updatedData)
+                .update(updatePayload)
                 .eq('id', id)
                 .eq('user_id', user.id);
 
+            // Fallback se colunas ainda não existirem no Supabase
+            if (error && (error.message?.includes('initial_balance') || error.message?.includes('currency'))) {
+                console.warn('Colunas initial_balance/currency ausentes no Supabase. Atualizando campos compatíveis.');
+                const { initial_balance, currency, ...fallbackPayload } = updatePayload;
+                const retry = await supabase
+                    .from('accounts')
+                    .update(fallbackPayload)
+                    .eq('id', id)
+                    .eq('user_id', user.id);
+                if (retry.error) throw retry.error;
+                error = null;
+            }
+
             if (error) {
                 console.error('Error updating account:', error);
+                alert(`Erro ao atualizar conta: ${error.message}`);
+                return false;
             } else {
-                setAccounts(prev => prev.map(acc => acc.id === id ? { ...acc, ...updatedData } : acc));
+                setAccounts(prev => prev.map(acc => acc.id === id ? { ...acc, ...updatePayload } : acc));
+                return true;
             }
         } catch (error) {
             console.error('Error updating account:', error);
+            alert(`Erro ao atualizar conta: ${error.message}`);
+            return false;
         }
     };
 
@@ -459,38 +510,55 @@ export const DataProvider = ({ children }) => {
         let totalResult = 0;
 
         if (accountId) {
-            // For specific accounts, use logs (daily trades)
-            // Handle both camelCase and snake_case
+            // Para conta específica: resultado acumulado dos trades
             const accountLogs = logs.filter(log =>
                 (log.accountId === accountId) || (log.account_id === accountId)
             );
             totalResult = accountLogs.reduce((acc, log) => acc + Number(log.amount), 0);
         } else {
-            // For global view, use withdrawals
-            // Handle both camelCase and snake_case
+            // Para visão geral global: total de saques
             totalResult = withdrawals.reduce((acc, w) =>
-                acc + Number(w.netAmount || w.net_amount), 0
+                acc + Number(w.netAmount || w.net_amount || 0), 0
             );
         }
 
         let targetAmount = Number(goal.amount || 0);
+        let initialBalance = 0;
+        let currency = 'BRL';
+        let accountWithdrawalsTotal = 0;
 
-        // If accountId is provided, try to use the account's specific goal
         if (accountId) {
             const account = accounts.find(a => a.id === accountId);
-            if (account && account.goal !== undefined) {
-                targetAmount = Number(account.goal);
+            if (account) {
+                if (account.goal !== undefined && account.goal !== null) {
+                    targetAmount = Number(account.goal);
+                }
+                initialBalance = Number(account.initial_balance || 0);
+                currency = account.currency || 'BRL';
             }
+
+            const accountWithdrawals = withdrawals.filter(w =>
+                (w.accountId === accountId) || (w.account_id === accountId)
+            );
+            accountWithdrawalsTotal = accountWithdrawals.reduce((acc, w) =>
+                acc + Number(w.grossAmount || w.gross_amount || 0), 0
+            );
         }
 
+        const currentBalance = initialBalance + totalResult - accountWithdrawalsTotal;
         const remaining = targetAmount - totalResult;
         const progress = targetAmount > 0 ? (totalResult / targetAmount) * 100 : 0;
 
         return {
             totalResult,
+            initialBalance,
+            currentBalance,
+            accountWithdrawalsTotal,
+            currency,
+            targetAmount,
             remaining: remaining > 0 ? remaining : 0,
             progress: Math.min(Math.max(progress, 0), 100),
-            isGoalMet: totalResult >= targetAmount
+            isGoalMet: targetAmount > 0 && totalResult >= targetAmount
         };
     };
 
