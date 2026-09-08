@@ -526,6 +526,7 @@ export const DataProvider = ({ children }) => {
         let initialBalance = 0;
         let currency = 'BRL';
         let accountWithdrawalsTotal = 0;
+        let todayResult = 0;
 
         if (accountId) {
             const account = accounts.find(a => a.id === accountId);
@@ -536,6 +537,20 @@ export const DataProvider = ({ children }) => {
                 initialBalance = Number(account.initial_balance || 0);
                 currency = account.currency || 'BRL';
             }
+
+            const accountLogs = logs.filter(log =>
+                (log.accountId === accountId) || (log.account_id === accountId)
+            );
+
+            // Data de hoje local (YYYY-MM-DD)
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+
+            const todayLogs = accountLogs.filter(log => log.date === todayStr);
+            todayResult = todayLogs.reduce((acc, log) => acc + Number(log.amount), 0);
 
             const accountWithdrawals = withdrawals.filter(w =>
                 (w.accountId === accountId) || (w.account_id === accountId)
@@ -551,6 +566,7 @@ export const DataProvider = ({ children }) => {
 
         return {
             totalResult,
+            todayResult,
             initialBalance,
             currentBalance,
             accountWithdrawalsTotal,

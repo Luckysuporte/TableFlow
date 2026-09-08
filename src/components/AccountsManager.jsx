@@ -58,6 +58,30 @@ const AccountsManager = () => {
     const [editType, setEditType] = useState('demo');
     const [editPhase, setEditPhase] = useState('1');
 
+    // Edição rápida de saldo direto no card ("cantinho no card")
+    const [quickBalanceAccountId, setQuickBalanceAccountId] = useState(null);
+    const [quickBalanceInput, setQuickBalanceInput] = useState('');
+
+    const startQuickBalanceEdit = (e, account) => {
+        e.stopPropagation();
+        setQuickBalanceAccountId(account.id);
+        setQuickBalanceInput(account.initial_balance !== undefined && account.initial_balance !== null && account.initial_balance !== '' ? account.initial_balance.toString() : '');
+    };
+
+    const handleSaveQuickBalance = async (e, accountId) => {
+        e.stopPropagation();
+        const sanitized = (quickBalanceInput || '').toString().replace(',', '.');
+        const parsed = parseFloat(sanitized);
+        const newBalance = isNaN(parsed) ? 0 : parsed;
+        await updateAccount(accountId, { initial_balance: newBalance });
+        setQuickBalanceAccountId(null);
+    };
+
+    const handleCancelQuickBalance = (e) => {
+        e.stopPropagation();
+        setQuickBalanceAccountId(null);
+    };
+
     // Abre o modal de edição com os dados da conta preenchidos
     const openEditModal = (account) => {
         setEditingAccount(account);
@@ -462,53 +486,181 @@ const AccountsManager = () => {
                                     </div>
                                 </div>
 
-                                {/* Bloco do Saldo Total da Conta */}
+                                {/* Bloco do Saldo na Corretora com cantinho de edição rápida */}
                                 <div style={{
                                     background: 'rgba(0, 0, 0, 0.3)',
                                     borderRadius: '12px',
                                     padding: '12px 14px',
                                     marginBottom: '12px',
-                                    border: '1px solid rgba(255,255,255,0.05)'
+                                    border: '1px solid rgba(255,255,255,0.06)'
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                        <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.5)' }}>
-                                            Saldo Total da Conta
+                                        <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'rgba(255,255,255,0.5)', fontWeight: '600' }}>
+                                            Saldo na Corretora
                                         </span>
-                                        {account.initial_balance > 0 && (
-                                            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>
-                                                Banca: {isVisible ? formatMoney(account.initial_balance, currency) : '••••••'}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div style={{
-                                        fontSize: '1.45rem',
-                                        fontWeight: '800',
-                                        color: 'white',
-                                        letterSpacing: isVisible ? 'normal' : '2px',
-                                        textShadow: '0 0 15px rgba(0,210,255,0.2)'
-                                    }}>
-                                        {isVisible ? formatMoney(summary.currentBalance, currency) : (currency === 'USD' ? '$ ••••••' : 'R$ ••••••')}
+
+                                        {/* Cantinho para adicionar/ajustar o saldo da corretora */}
+                                        <button
+                                            type="button"
+                                            onClick={(e) => startQuickBalanceEdit(e, account)}
+                                            title="Clique para ajustar o saldo da corretora"
+                                            style={{
+                                                background: 'rgba(0, 210, 255, 0.1)',
+                                                border: '1px solid rgba(0, 210, 255, 0.25)',
+                                                borderRadius: '6px',
+                                                color: '#00d2ff',
+                                                padding: '3px 8px',
+                                                fontSize: '0.75rem',
+                                                fontWeight: '500',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <Edit2 size={12} />
+                                            <span>{account.initial_balance ? 'Ajustar' : '+ Adicionar'}</span>
+                                        </button>
                                     </div>
 
-                                    {/* Sublinha de Resultado Acumulado */}
+                                    {/* Edição Rápida Inline ou Exibição do Saldo */}
+                                    {quickBalanceAccountId === account.id ? (
+                                        <div 
+                                            onClick={(e) => e.stopPropagation()} 
+                                            style={{ display: 'flex', gap: '8px', alignItems: 'center', margin: '8px 0' }}
+                                        >
+                                            <input
+                                                type="text"
+                                                inputMode="decimal"
+                                                value={quickBalanceInput}
+                                                onChange={(e) => setQuickBalanceInput(e.target.value)}
+                                                placeholder="Ex: 901.95"
+                                                autoFocus
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') handleSaveQuickBalance(e, account.id);
+                                                    if (e.key === 'Escape') handleCancelQuickBalance(e);
+                                                }}
+                                                style={{
+                                                    flex: 1,
+                                                    background: 'rgba(0, 0, 0, 0.6)',
+                                                    border: '1px solid #00d2ff',
+                                                    borderRadius: '8px',
+                                                    padding: '8px 12px',
+                                                    color: 'white',
+                                                    fontSize: '1.15rem',
+                                                    fontWeight: 'bold',
+                                                    outline: 'none',
+                                                    boxShadow: '0 0 10px rgba(0, 210, 255, 0.2)'
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={(e) => handleSaveQuickBalance(e, account.id)}
+                                                style={{
+                                                    background: 'linear-gradient(135deg, #00d2ff, #3a7bd5)',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    padding: '8px 14px',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '0.85rem',
+                                                    cursor: 'pointer',
+                                                    whiteSpace: 'nowrap'
+                                                }}
+                                            >
+                                                Salvar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleCancelQuickBalance}
+                                                style={{
+                                                    background: 'rgba(255,255,255,0.1)',
+                                                    color: 'rgba(255,255,255,0.7)',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    padding: '8px 10px',
+                                                    fontSize: '0.85rem',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div 
+                                            onClick={(e) => startQuickBalanceEdit(e, account)}
+                                            title="Clique para ajustar o saldo da corretora"
+                                            style={{
+                                                fontSize: '1.55rem',
+                                                fontWeight: '800',
+                                                color: 'white',
+                                                letterSpacing: isVisible ? 'normal' : '2px',
+                                                textShadow: '0 0 15px rgba(0,210,255,0.2)',
+                                                cursor: 'pointer',
+                                                margin: '4px 0 8px 0',
+                                                display: 'flex',
+                                                alignItems: 'baseline',
+                                                gap: '8px'
+                                            }}
+                                        >
+                                            <span>
+                                                {isVisible ? (
+                                                    account.initial_balance !== undefined && account.initial_balance !== null && account.initial_balance !== '' ? (
+                                                        formatMoney(account.initial_balance, currency)
+                                                    ) : (
+                                                        formatMoney(0, currency)
+                                                    )
+                                                ) : (
+                                                    currency === 'USD' ? '$ ••••••' : 'R$ ••••••'
+                                                )}
+                                            </span>
+                                            {isVisible && (!account.initial_balance || account.initial_balance === 0) && (
+                                                <span style={{ fontSize: '0.75rem', color: 'rgba(0, 210, 255, 0.8)', fontWeight: 'normal' }}>
+                                                    (clique para definir)
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Linha com Resultados: Hoje e Acumulado */}
                                     <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: '10px',
                                         marginTop: '8px',
-                                        paddingTop: '6px',
-                                        borderTop: '1px solid rgba(255,255,255,0.05)',
+                                        paddingTop: '8px',
+                                        borderTop: '1px solid rgba(255,255,255,0.06)',
                                         fontSize: '0.8rem'
                                     }}>
-                                        <span style={{ color: 'rgba(255,255,255,0.55)' }}>Lucro/Prejuízo Acumulado:</span>
-                                        <span style={{
-                                            fontWeight: 'bold',
-                                            color: summary.totalResult > 0 ? '#00d2ff' : summary.totalResult < 0 ? '#dc2430' : 'rgba(255,255,255,0.7)'
-                                        }}>
-                                            {isVisible ? (
-                                                `${summary.totalResult > 0 ? '+' : ''}${formatMoney(summary.totalResult, currency)}`
-                                            ) : '••••••'}
-                                        </span>
+                                        <div>
+                                            <span style={{ color: 'rgba(255,255,255,0.5)', display: 'block', fontSize: '0.73rem', textTransform: 'uppercase' }}>
+                                                Hoje
+                                            </span>
+                                            <span style={{
+                                                fontWeight: 'bold',
+                                                fontSize: '0.88rem',
+                                                color: summary.todayResult > 0 ? '#00d2ff' : summary.todayResult < 0 ? '#dc2430' : 'rgba(255,255,255,0.7)'
+                                            }}>
+                                                {isVisible ? (
+                                                    `${summary.todayResult > 0 ? '+' : ''}${formatMoney(summary.todayResult, currency)}`
+                                                ) : '••••••'}
+                                            </span>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <span style={{ color: 'rgba(255,255,255,0.5)', display: 'block', fontSize: '0.73rem', textTransform: 'uppercase' }}>
+                                                Acumulado
+                                            </span>
+                                            <span style={{
+                                                fontWeight: 'bold',
+                                                fontSize: '0.88rem',
+                                                color: summary.totalResult > 0 ? '#00d2ff' : summary.totalResult < 0 ? '#dc2430' : 'rgba(255,255,255,0.7)'
+                                            }}>
+                                                {isVisible ? (
+                                                    `${summary.totalResult > 0 ? '+' : ''}${formatMoney(summary.totalResult, currency)}`
+                                                ) : '••••••'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
 
