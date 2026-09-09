@@ -6,7 +6,7 @@ import NeonInput from './NeonInput';
 import { Target, Edit2, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const GoalTracker = ({ accountId }) => {
+const GoalTracker = ({ accountId, monthFilter = 'all' }) => {
     const { goal, updateGoal, getSummary, accounts, updateAccount } = useData();
     const [isEditing, setIsEditing] = useState(false);
 
@@ -21,15 +21,16 @@ const GoalTracker = ({ accountId }) => {
     useEffect(() => {
         if (accountId && currentAccount) {
             setTempGoalAmount(currentAccount.goal || 0);
-            setTempGoalName('Meta da Mesa'); // Fixed name for account goals usually, or allow editing? User just wants "Meta da Mesa".
+            setTempGoalName('Meta da Mesa');
         } else {
             setTempGoalAmount(goal.amount);
             setTempGoalName(goal.name);
         }
     }, [accountId, currentAccount, goal, isEditing]);
 
-    const { totalResult, remaining, progress, isGoalMet, currentBalance, initialBalance, currency } = getSummary(accountId);
+    const { totalResult, selectedMonthResult, remaining, progress, isGoalMet, currentBalance, initialBalance, currency } = getSummary(accountId, monthFilter);
     const currencySymbol = (accountId && (currentAccount?.currency === 'USD' || currency === 'USD')) ? '$' : 'R$';
+    const activeResult = (monthFilter && monthFilter !== 'all') ? selectedMonthResult : totalResult;
 
     const handleSave = () => {
         if (accountId) {
@@ -40,9 +41,17 @@ const GoalTracker = ({ accountId }) => {
         setIsEditing(false);
     };
 
+    const getMonthLabel = (mStr) => {
+        if (!mStr || mStr === 'all') return 'Geral (Acumulado de todos os meses)';
+        const [y, m] = mStr.split('-');
+        const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        const name = months[parseInt(m, 10) - 1] || m;
+        return `Ciclo de ${name}/${y}`;
+    };
+
     // Title logic
-    const title = accountId ? 'Meta da Mesa' : (goal.name || 'Objetivo Financeiro');
-    const subtitle = accountId ? 'Progresso individual desta conta' : 'Progresso baseado em saques realizados';
+    const title = accountId ? (monthFilter && monthFilter !== 'all' ? `Meta Mensal: ${getMonthLabel(monthFilter)}` : 'Meta da Mesa') : (goal.name || 'Objetivo Financeiro');
+    const subtitle = accountId ? (monthFilter && monthFilter !== 'all' ? `Progresso referente a ${getMonthLabel(monthFilter)}` : 'Progresso acumulado desta conta') : 'Progresso baseado em saques realizados';
 
     return (
         <Card className="glass-card">
@@ -141,9 +150,11 @@ const GoalTracker = ({ accountId }) => {
                         </div>
 
                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '5px' }}>Acumulado</div>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: totalResult > 0 ? '#00d2ff' : totalResult < 0 ? '#dc2430' : 'white' }}>
-                                {totalResult > 0 ? '+' : ''}{currencySymbol} {totalResult.toLocaleString()}
+                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '5px' }}>
+                                {monthFilter && monthFilter !== 'all' ? 'Resultado do Mês' : 'Acumulado Geral'}
+                            </div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: activeResult > 0 ? '#00d2ff' : activeResult < 0 ? '#dc2430' : 'white' }}>
+                                {activeResult > 0 ? '+' : ''}{currencySymbol} {activeResult.toLocaleString()}
                             </div>
                         </div>
 

@@ -1,17 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import Button from './Button';
 import NeonInput from './NeonInput';
 import DailyLog from './DailyLog';
 import GoalTracker from './GoalTracker';
 import Card from './Card';
-import { Plus, Trash2, Monitor, Edit2, Eye, EyeOff, X, Target, DollarSign, Check, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, Monitor, Edit2, Eye, EyeOff, X, Target, DollarSign, Check, TrendingUp, Calendar, Layers, Combine, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AccountsManager = () => {
-    const { accounts, addAccount, updateAccount, deleteAccount, getSummary } = useData();
+    const { accounts, addAccount, updateAccount, deleteAccount, mergeAccounts, getSummary, logs } = useData();
     const [showAddForm, setShowAddForm] = useState(false);
     const [selectedAccount, setSelectedAccount] = useState(null);
+
+    // Filtro de Mês para a conta selecionada ('all' ou 'YYYY-MM')
+    const [selectedMonth, setSelectedMonth] = useState('all');
+
+    // Modal de Unificação de Mesas
+    const [showMergeModal, setShowMergeModal] = useState(false);
+    const [sourceAccountToMerge, setSourceAccountToMerge] = useState('');
+    const [isMerging, setIsMerging] = useState(false);
 
     // Privacy (Olho): controle global e por card individual
     const [globalShowBalances, setGlobalShowBalances] = useState(() => {
@@ -149,7 +157,29 @@ const AccountsManager = () => {
         }
     };
 
-    // Formatação monetária de acordo com a moeda
+    // Executa a unificação de uma mesa antiga para a mesa selecionada
+    const handleMergeSubmit = async (e) => {
+        e.preventDefault();
+        if (!sourceAccountToMerge || !selectedAccount) return;
+
+        const sourceAcc = accounts.find(a => a.id === sourceAccountToMerge);
+        const confirmMerge = window.confirm(
+            `Tem certeza que deseja transferir todos os trades de "${sourceAcc?.name}" para "${selectedAccount.name}"?\n\nOs trades manterão as datas originais e o card "${sourceAcc?.name}" será removido.`
+        );
+
+        if (!confirmMerge) return;
+
+        setIsMerging(true);
+        const success = await mergeAccounts(sourceAccountToMerge, selectedAccount.id);
+        setIsMerging(false);
+
+        if (success) {
+            setShowMergeModal(false);
+            setSourceAccountToMerge('');
+        }
+    };
+
+    // Formatação monetária
     const formatMoney = (val, currency = 'BRL') => {
         const num = Number(val || 0);
         if (currency === 'USD') {
@@ -157,6 +187,35 @@ const AccountsManager = () => {
         }
         return `R$ ${num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
+
+    // Formatação do nome do mês (ex: '2026-09' -> 'Setembro/26')
+    const formatMonthShort = (mStr) => {
+        if (!mStr || mStr === 'all') return 'Todos';
+        const [y, m] = mStr.split('-');
+        const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        return `${months[parseInt(m, 10) - 1]}/${y.slice(2)}`;
+    };
+
+    // Meses disponíveis para a conta selecionada
+    const availableMonths = useMemo(() => {
+        if (!selectedAccount) return [];
+        const accLogs = logs.filter(l => l.accountId === selectedAccount.id || l.account_id === selectedAccount.id);
+        const monthsSet = new Set();
+
+        // Mês atual sempre incluído
+        const now = new Date();
+        const curM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        monthsSet.add(curM);
+
+        accLogs.forEach(l => {
+            if (l.date && l.date.length >= 7) {
+                monthsSet.add(l.date.substring(0, 7));
+            }
+        });
+
+        // Ordenar decrescente (mais recente primeiro)
+        return Array.from(monthsSet).sort().reverse();
+    }, [selectedAccount, logs]);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
@@ -410,7 +469,6 @@ const AccountsManager = () => {
                                         </div>
                                         <div>
                                             <h4 style={{ color: 'white', fontWeight: 'bold', fontSize: '1.05rem', margin: 0 }}>{account.name}</h4>
-                                            {/* Número da Conta com destaque */}
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                                                 <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', fontFamily: 'monospace', fontWeight: '600' }}>
                                                     #{account.number}
@@ -623,23 +681,23 @@ const AccountsManager = () => {
                                         </div>
                                     )}
 
-                                    {/* Linha com Resultados: Hoje e Acumulado */}
+                                    {/* Linha com Resultados: Hoje, Mês Atual e Geral */}
                                     <div style={{
                                         display: 'grid',
-                                        gridTemplateColumns: '1fr 1fr',
-                                        gap: '10px',
+                                        gridTemplateColumns: '1fr 1fr 1fr',
+                                        gap: '6px',
                                         marginTop: '8px',
                                         paddingTop: '8px',
                                         borderTop: '1px solid rgba(255,255,255,0.06)',
                                         fontSize: '0.8rem'
                                     }}>
                                         <div>
-                                            <span style={{ color: 'rgba(255,255,255,0.5)', display: 'block', fontSize: '0.73rem', textTransform: 'uppercase' }}>
+                                            <span style={{ color: 'rgba(255,255,255,0.5)', display: 'block', fontSize: '0.7rem', textTransform: 'uppercase' }}>
                                                 Hoje
                                             </span>
                                             <span style={{
                                                 fontWeight: 'bold',
-                                                fontSize: '0.88rem',
+                                                fontSize: '0.85rem',
                                                 color: summary.todayResult > 0 ? '#00d2ff' : summary.todayResult < 0 ? '#dc2430' : 'rgba(255,255,255,0.7)'
                                             }}>
                                                 {isVisible ? (
@@ -647,13 +705,27 @@ const AccountsManager = () => {
                                                 ) : '••••••'}
                                             </span>
                                         </div>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <span style={{ color: 'rgba(255,255,255,0.5)', display: 'block', fontSize: '0.7rem', textTransform: 'uppercase' }}>
+                                                Mês Atual
+                                            </span>
+                                            <span style={{
+                                                fontWeight: 'bold',
+                                                fontSize: '0.85rem',
+                                                color: summary.currentMonthResult > 0 ? '#00d2ff' : summary.currentMonthResult < 0 ? '#dc2430' : 'rgba(255,255,255,0.7)'
+                                            }}>
+                                                {isVisible ? (
+                                                    `${summary.currentMonthResult > 0 ? '+' : ''}${formatMoney(summary.currentMonthResult, currency)}`
+                                                ) : '••••••'}
+                                            </span>
+                                        </div>
                                         <div style={{ textAlign: 'right' }}>
-                                            <span style={{ color: 'rgba(255,255,255,0.5)', display: 'block', fontSize: '0.73rem', textTransform: 'uppercase' }}>
+                                            <span style={{ color: 'rgba(255,255,255,0.5)', display: 'block', fontSize: '0.7rem', textTransform: 'uppercase' }}>
                                                 Acumulado
                                             </span>
                                             <span style={{
                                                 fontWeight: 'bold',
-                                                fontSize: '0.88rem',
+                                                fontSize: '0.85rem',
                                                 color: summary.totalResult > 0 ? '#00d2ff' : summary.totalResult < 0 ? '#dc2430' : 'rgba(255,255,255,0.7)'
                                             }}>
                                                 {isVisible ? (
@@ -740,7 +812,7 @@ const AccountsManager = () => {
                 })}
             </div>
 
-            {/* Modal de Edição de Mesa (permite editar número, nome, saldo, meta, moeda, etc.) */}
+            {/* Modal de Edição de Mesa */}
             <AnimatePresence>
                 {editingAccount && (
                     <div
@@ -953,7 +1025,125 @@ const AccountsManager = () => {
                 )}
             </AnimatePresence>
 
-            {/* Detalhes da Conta Selecionada (GoalTracker e DailyLog) */}
+            {/* Modal de Unificação de Mesas */}
+            <AnimatePresence>
+                {showMergeModal && selectedAccount && (
+                    <div
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'rgba(0, 0, 0, 0.75)',
+                            backdropFilter: 'blur(8px)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 9999,
+                            padding: '20px'
+                        }}
+                        onClick={() => setShowMergeModal(false)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ width: '100%', maxWidth: '520px' }}
+                        >
+                            <Card style={{ border: '1px solid rgba(0, 210, 255, 0.4)', background: '#131127' }}>
+                                <form onSubmit={handleMergeSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(0, 210, 255, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Combine size={20} color="#00d2ff" />
+                                            </div>
+                                            <div>
+                                                <h3 style={{ color: 'white', margin: 0, fontSize: '1.2rem' }}>Unificar Mesas</h3>
+                                                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>
+                                                    Mover trades para: <strong style={{ color: '#00d2ff' }}>{selectedAccount.name}</strong>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowMergeModal(false)}
+                                            style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}
+                                        >
+                                            <X size={20} />
+                                        </button>
+                                    </div>
+
+                                    <div style={{ background: 'rgba(0, 210, 255, 0.05)', border: '1px solid rgba(0, 210, 255, 0.15)', borderRadius: '10px', padding: '14px', fontSize: '0.88rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
+                                        💡 Selecione um card antigo (ex: <strong>5PI - agosto</strong> ou <strong>5PI - mês 2</strong>). Todos os pregões dele serão transferidos para esta mesa com as datas originais mantidas, e o card antigo será removido da tela.
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', marginBottom: '8px', fontSize: '0.9rem' }}>
+                                            Escolha a mesa de origem para migrar:
+                                        </label>
+                                        <select
+                                            value={sourceAccountToMerge}
+                                            onChange={(e) => setSourceAccountToMerge(e.target.value)}
+                                            required
+                                            style={{
+                                                width: '100%',
+                                                padding: '12px',
+                                                borderRadius: '8px',
+                                                background: 'rgba(0,0,0,0.5)',
+                                                border: '1px solid rgba(255,255,255,0.2)',
+                                                color: 'white',
+                                                fontSize: '0.95rem',
+                                                outline: 'none'
+                                            }}
+                                        >
+                                            <option value="" style={{ background: '#1a1a2e', color: 'gray' }}>-- Selecione a mesa para unificar --</option>
+                                            {accounts
+                                                .filter(a => a.id !== selectedAccount.id)
+                                                .map(acc => {
+                                                    const count = logs.filter(l => l.accountId === acc.id || l.account_id === acc.id).length;
+                                                    return (
+                                                        <option key={acc.id} value={acc.id} style={{ background: '#1a1a2e' }}>
+                                                            {acc.name} (#{acc.number}) — {count} pregões registrados
+                                                        </option>
+                                                    );
+                                                })}
+                                        </select>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            onClick={() => setShowMergeModal(false)}
+                                            style={{ flex: 1, padding: '12px' }}
+                                        >
+                                            Cancelar
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            disabled={!sourceAccountToMerge || isMerging}
+                                            style={{
+                                                flex: 2,
+                                                padding: '12px',
+                                                background: 'linear-gradient(135deg, #00d2ff, #3a7bd5)',
+                                                border: 'none',
+                                                fontWeight: 'bold',
+                                                opacity: (!sourceAccountToMerge || isMerging) ? 0.5 : 1
+                                            }}
+                                        >
+                                            {isMerging ? 'Unificando...' : 'Unificar e Mover Trades'}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </Card>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Detalhes da Conta Selecionada (Filtro de Meses, GoalTracker e DailyLog) */}
             <AnimatePresence>
                 {selectedAccount && (
                     <motion.div
@@ -961,18 +1151,140 @@ const AccountsManager = () => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                     >
-                        <div style={{ marginBottom: '30px' }}>
-                            <GoalTracker accountId={selectedAccount.id} />
+                        {/* Barra de Filtro de Mês e Ferramentas da Mesa */}
+                        <div style={{
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            borderRadius: '14px',
+                            padding: '16px 20px',
+                            marginBottom: '25px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '15px'
+                        }}>
+                            {/* Seletor de Meses */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'white', fontWeight: 'bold' }}>
+                                    <Calendar size={18} color="#00d2ff" />
+                                    <span style={{ fontSize: '0.95rem' }}>Ciclo / Mês:</span>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                    {/* Botão Geral / Todos */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedMonth('all')}
+                                        style={{
+                                            padding: '7px 14px',
+                                            borderRadius: '20px',
+                                            border: selectedMonth === 'all' ? '1px solid #a855f7' : '1px solid rgba(255,255,255,0.1)',
+                                            background: selectedMonth === 'all' ? 'linear-gradient(135deg, rgba(168,85,247,0.3), rgba(0,210,255,0.3))' : 'rgba(255,255,255,0.04)',
+                                            color: selectedMonth === 'all' ? 'white' : 'rgba(255,255,255,0.7)',
+                                            cursor: 'pointer',
+                                            fontSize: '0.85rem',
+                                            fontWeight: selectedMonth === 'all' ? 'bold' : 'normal',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        Geral (Todos)
+                                    </button>
+
+                                    {/* Botões dos Meses que têm movimentação */}
+                                    {availableMonths.map((mStr) => {
+                                        const isSelected = selectedMonth === mStr;
+                                        const monthLogs = logs.filter(l => (l.accountId === selectedAccount.id || l.account_id === selectedAccount.id) && l.date?.startsWith(mStr));
+                                        const monthSum = monthLogs.reduce((acc, l) => acc + Number(l.amount), 0);
+                                        const cur = selectedAccount.currency || 'BRL';
+
+                                        return (
+                                            <button
+                                                key={mStr}
+                                                type="button"
+                                                onClick={() => setSelectedMonth(mStr)}
+                                                style={{
+                                                    padding: '7px 14px',
+                                                    borderRadius: '20px',
+                                                    border: isSelected ? '1px solid #00d2ff' : '1px solid rgba(255,255,255,0.1)',
+                                                    background: isSelected ? 'rgba(0, 210, 255, 0.2)' : 'rgba(255,255,255,0.04)',
+                                                    color: isSelected ? '#00d2ff' : 'rgba(255,255,255,0.7)',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: isSelected ? 'bold' : 'normal',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                <span>{formatMonthShort(mStr)}</span>
+                                                {monthLogs.length > 0 && (
+                                                    <span style={{
+                                                        fontSize: '0.75rem',
+                                                        padding: '2px 6px',
+                                                        borderRadius: '10px',
+                                                        background: monthSum >= 0 ? 'rgba(0,210,255,0.15)' : 'rgba(220,36,48,0.2)',
+                                                        color: monthSum >= 0 ? '#00d2ff' : '#dc2430'
+                                                    }}>
+                                                        {monthSum >= 0 ? '+' : ''}{formatMoney(monthSum, cur)}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Botão para Unificar Mesas */}
+                            {accounts.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowMergeModal(true)}
+                                    title="Mover pregões de outra mesa antiga para esta mesa"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        padding: '7px 14px',
+                                        borderRadius: '8px',
+                                        background: 'rgba(0, 210, 255, 0.08)',
+                                        border: '1px solid rgba(0, 210, 255, 0.25)',
+                                        color: '#00d2ff',
+                                        cursor: 'pointer',
+                                        fontSize: '0.85rem',
+                                        fontWeight: '500',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <Combine size={15} />
+                                    <span>Unificar Mesas</span>
+                                </button>
+                            )}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                            <h3 style={{ fontSize: '1.2rem', color: 'white' }}>
-                                Diário de Trades: <span style={{ color: '#a855f7' }}>{selectedAccount.name}</span>
+
+                        {/* GoalTracker com filtro de mês */}
+                        <div style={{ marginBottom: '30px' }}>
+                            <GoalTracker accountId={selectedAccount.id} monthFilter={selectedMonth} />
+                        </div>
+
+                        {/* Cabeçalho do Diário */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                            <h3 style={{ fontSize: '1.25rem', color: 'white', margin: 0 }}>
+                                Diário de Trades: <span style={{ color: '#00d2ff' }}>{selectedAccount.name}</span>
                                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', marginLeft: '10px' }}>
                                     (#{selectedAccount.number})
                                 </span>
                             </h3>
+                            {selectedMonth !== 'all' && (
+                                <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', background: 'rgba(255,255,255,0.05)', padding: '4px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                    Filtrado por: <strong style={{ color: '#00d2ff' }}>{formatMonthShort(selectedMonth)}</strong>
+                                </span>
+                            )}
                         </div>
-                        <DailyLog accountId={selectedAccount.id} />
+
+                        {/* DailyLog com filtro de mês */}
+                        <DailyLog accountId={selectedAccount.id} monthFilter={selectedMonth} />
                     </motion.div>
                 )}
             </AnimatePresence>

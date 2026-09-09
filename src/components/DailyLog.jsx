@@ -6,7 +6,7 @@ import NeonInput from './NeonInput';
 import { Calendar, TrendingUp, TrendingDown, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
-const DailyLog = ({ accountId }) => {
+const DailyLog = ({ accountId, monthFilter = 'all' }) => {
     const { logs, addLog, deleteLog, accounts } = useData();
     const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [amount, setAmount] = useState('');
@@ -15,8 +15,11 @@ const DailyLog = ({ accountId }) => {
     const currentAccount = accounts?.find(a => a.id === accountId);
     const currencySymbol = currentAccount?.currency === 'USD' ? '$' : 'R$';
 
-    // Filter logs for this specific account
-    const accountLogs = logs.filter(log => log.accountId === accountId);
+    // Filter logs for this specific account and month
+    const allAccountLogs = logs.filter(log => log.accountId === accountId || log.account_id === accountId);
+    const accountLogs = monthFilter && monthFilter !== 'all'
+        ? allAccountLogs.filter(log => log.date?.startsWith(monthFilter))
+        : allAccountLogs;
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -35,6 +38,7 @@ const DailyLog = ({ accountId }) => {
 
     const positiveDays = accountLogs.filter(l => l.amount > 0).length;
     const negativeDays = accountLogs.filter(l => l.amount < 0).length;
+    const totalPeriod = accountLogs.reduce((acc, l) => acc + Number(l.amount), 0);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -75,14 +79,20 @@ const DailyLog = ({ accountId }) => {
                     </form>
                 )}
 
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                    <div style={{ flex: 1, background: 'rgba(0, 210, 255, 0.1)', padding: '10px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '20px' }}>
+                    <div style={{ background: 'rgba(0, 210, 255, 0.1)', padding: '10px 14px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <TrendingUp size={16} color="#00d2ff" />
-                        <span style={{ fontSize: '0.9rem' }}>Dias Positivos: <strong>{positiveDays}</strong></span>
+                        <span style={{ fontSize: '0.85rem' }}>Gain: <strong style={{ color: '#00d2ff' }}>{positiveDays} dias</strong></span>
                     </div>
-                    <div style={{ flex: 1, background: 'rgba(220, 36, 48, 0.1)', padding: '10px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ background: 'rgba(220, 36, 48, 0.1)', padding: '10px 14px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <TrendingDown size={16} color="#dc2430" />
-                        <span style={{ fontSize: '0.9rem' }}>Dias Negativos: <strong>{negativeDays}</strong></span>
+                        <span style={{ fontSize: '0.85rem' }}>Loss: <strong style={{ color: '#dc2430' }}>{negativeDays} dias</strong></span>
+                    </div>
+                    <div style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '10px 14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>Total Período:</span>
+                        <strong style={{ color: totalPeriod >= 0 ? '#00d2ff' : '#dc2430', fontSize: '0.95rem' }}>
+                            {totalPeriod >= 0 ? '+' : ''}{currencySymbol} {totalPeriod.toLocaleString()}
+                        </strong>
                     </div>
                 </div>
 

@@ -506,20 +506,92 @@ export const DataProvider = ({ children }) => {
         }
     };
 
-    const getSummary = (accountId = null) => {
+    const mergeAccounts = async (sourceAccountId, targetAccountId) => {
+        try {
+            console.log(`Unificando mesa ${sourceAccountId} na mesa ${targetAccountId}...`);
+
+            // 1. Mover logs para a conta destino
+            const { error: logsError } = await supabase
+                .from('logs')
+                .update({ account_id: targetAccountId })
+                .eq('account_id', sourceAccountId)
+                .eq('user_id', user.id);
+
+            if (logsError) throw logsError;
+
+            // 2. Mover saques (se houver)
+            const { error: wError } = await supabase
+                .from('withdrawals')
+                .update({ account_id: targetAccountId })
+                .eq('account_id', sourceAccountId)
+                .eq('user_id', user.id);
+
+            if (wError) console.warn('Aviso ao mover saques:', wError);
+
+            // 3. Deletar conta de origem
+            const { error: delError } = await supabase
+                .from('accounts')
+                .delete()
+                .eq('id', sourceAccountId)
+                .eq('user_id', user.id);
+
+            if (delError) throw delError;
+
+            // 4. Atualizar estado local
+            setAccounts(prev => prev.filter(acc => acc.id !== sourceAccountId));
+            setLogs(prev => prev.map(log =>
+                (log.accountId === sourceAccountId || log.account_id === sourceAccountId)
+                    ? { ...log, accountId: targetAccountId, account_id: targetAccountId }
+                    : log
+            ));
+            setWithdrawals(prev => prev.map(w =>
+                (w.accountId === sourceAccountId || w.account_id === sourceAccountId)
+                    ? { ...w, accountId: targetAccountId, account_id: targetAccountId }
+                    : w
+            ));
+
+            return true;
+        } catch (error) {
+            console.error('Erro ao unificar mesas:', error);
+            alert(`Erro ao unificar mesas: ${error.message}`);
+            return false;
+        }
+    };
+
+    const getSummary = (accountId = null, monthFilter = null) => {
         let totalResult = 0;
+        let selectedMonthResult = 0;
+        let currentMonthResult = 0;
+
+        const now = new Date();
+        const curYear = now.getFullYear();
+        const curMonth = String(now.getMonth() + 1).padStart(2, '0');
+        const curDay = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${curYear}-${curMonth}-${curDay}`;
+        const currentMonthStr = `${curYear}-${curMonth}`;
+
+        let accountLogs = [];
 
         if (accountId) {
-            // Para conta específica: resultado acumulado dos trades
-            const accountLogs = logs.filter(log =>
+            accountLogs = logs.filter(log =>
                 (log.accountId === accountId) || (log.account_id === accountId)
             );
             totalResult = accountLogs.reduce((acc, log) => acc + Number(log.amount), 0);
+
+            const curMonthLogs = accountLogs.filter(log => log.date?.startsWith(currentMonthStr));
+            currentMonthResult = curMonthLogs.reduce((acc, log) => acc + Number(log.amount), 0);
+
+            if (monthFilter && monthFilter !== 'all') {
+                const filtered = accountLogs.filter(log => log.date?.startsWith(monthFilter));
+                selectedMonthResult = filtered.reduce((acc, log) => acc + Number(log.amount), 0);
+            } else {
+                selectedMonthResult = totalResult;
+            }
         } else {
-            // Para visão geral global: total de saques
             totalResult = withdrawals.reduce((acc, w) =>
                 acc + Number(w.netAmount || w.net_amount || 0), 0
             );
+            selectedMonthResult = totalResult;
         }
 
         let targetAmount = Number(goal.amount || 0);
@@ -538,17 +610,6 @@ export const DataProvider = ({ children }) => {
                 currency = account.currency || 'BRL';
             }
 
-            const accountLogs = logs.filter(log =>
-                (log.accountId === accountId) || (log.account_id === accountId)
-            );
-
-            // Data de hoje local (YYYY-MM-DD)
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const todayStr = `${year}-${month}-${day}`;
-
             const todayLogs = accountLogs.filter(log => log.date === todayStr);
             todayResult = todayLogs.reduce((acc, log) => acc + Number(log.amount), 0);
 
@@ -561,11 +622,14 @@ export const DataProvider = ({ children }) => {
         }
 
         const currentBalance = initialBalance + totalResult - accountWithdrawalsTotal;
-        const remaining = targetAmount - totalResult;
-        const progress = targetAmount > 0 ? (totalResult / targetAmount) * 100 : 0;
+        const activeResultForGoal = (monthFilter && monthFilter !== 'all') ? selectedMonthResult : totalResult;
+        const remaining = targetAmount - activeResultForGoal;
+        const progress = targetAmount > 0 ? (activeResultForGoal / targetAmount) * 100 : 0;
 
         return {
             totalResult,
+            selectedMonthResult,
+            currentMonthResult,
             todayResult,
             initialBalance,
             currentBalance,
@@ -574,7 +638,7 @@ export const DataProvider = ({ children }) => {
             targetAmount,
             remaining: remaining > 0 ? remaining : 0,
             progress: Math.min(Math.max(progress, 0), 100),
-            isGoalMet: targetAmount > 0 && totalResult >= targetAmount
+            isGoalMet: targetAmount > 0 && activeResultForGoal >= targetAmount
         };
     };
 
@@ -602,6 +666,7 @@ export const DataProvider = ({ children }) => {
             addAccount,
             updateAccount,
             deleteAccount,
+            mergeAccounts,
             addLog,
             deleteLog,
             addWithdrawal,
