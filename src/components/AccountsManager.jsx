@@ -9,7 +9,7 @@ import { Plus, Trash2, Monitor, Edit2, Eye, EyeOff, X, Target, DollarSign, Check
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AccountsManager = () => {
-    const { accounts, addAccount, updateAccount, deleteAccount, mergeAccounts, getSummary, logs } = useData();
+    const { accounts, addAccount, updateAccount, deleteAccount, mergeAccounts, getSummary, logs, withdrawals = [] } = useData();
     const [showAddForm, setShowAddForm] = useState(false);
     const [selectedAccount, setSelectedAccount] = useState(null);
 
@@ -71,18 +71,27 @@ const AccountsManager = () => {
     const [quickBalanceAccountId, setQuickBalanceAccountId] = useState(null);
     const [quickBalanceInput, setQuickBalanceInput] = useState('');
 
-    const startQuickBalanceEdit = (e, account) => {
+    const startQuickBalanceEdit = (e, account, currentBal) => {
         e.stopPropagation();
         setQuickBalanceAccountId(account.id);
-        setQuickBalanceInput(account.initial_balance !== undefined && account.initial_balance !== null && account.initial_balance !== '' ? account.initial_balance.toString() : '');
+        const val = currentBal !== undefined && currentBal !== null ? currentBal : (account.initial_balance !== undefined && account.initial_balance !== null ? account.initial_balance : '');
+        setQuickBalanceInput(val !== '' ? val.toString() : '');
     };
 
     const handleSaveQuickBalance = async (e, accountId) => {
         e.stopPropagation();
         const sanitized = (quickBalanceInput || '').toString().replace(',', '.');
         const parsed = parseFloat(sanitized);
-        const newBalance = isNaN(parsed) ? 0 : parsed;
-        await updateAccount(accountId, { initial_balance: newBalance });
+        const targetBalance = isNaN(parsed) ? 0 : parsed;
+
+        // Calibra a banca inicial para que o Saldo Atual (currentBalance) bata exatamente com o saldo digitado
+        const accountLogs = logs.filter(l => (l.accountId === accountId) || (l.account_id === accountId));
+        const totalTrades = accountLogs.reduce((acc, log) => acc + Number(log.amount || 0), 0);
+        const accountWithdrawals = withdrawals.filter(w => (w.accountId === accountId) || (w.account_id === accountId));
+        const totalWithdrawals = accountWithdrawals.reduce((acc, w) => acc + Number(w.grossAmount || w.gross_amount || 0), 0);
+
+        const calculatedInitial = targetBalance - totalTrades + totalWithdrawals;
+        await updateAccount(accountId, { initial_balance: calculatedInitial });
         setQuickBalanceAccountId(null);
     };
 
@@ -96,7 +105,11 @@ const AccountsManager = () => {
         setEditingAccount(account);
         setEditNumber(account.number || '');
         setEditName(account.name || '');
-        setEditInitialBalance(account.initial_balance !== undefined && account.initial_balance !== null ? account.initial_balance : '');
+        const accSummary = getSummary(account.id);
+        const currentBal = accSummary?.currentBalance !== undefined && accSummary?.currentBalance !== null
+            ? accSummary.currentBalance
+            : (account.initial_balance !== undefined && account.initial_balance !== null ? account.initial_balance : '');
+        setEditInitialBalance(currentBal !== '' ? currentBal : '');
         setEditGoal(account.goal !== undefined && account.goal !== null ? account.goal : '');
         setEditCurrency(account.currency || 'BRL');
         setEditType(account.type || 'demo');
@@ -139,12 +152,20 @@ const AccountsManager = () => {
         e.preventDefault();
         if (!editingAccount) return;
 
+        const targetBalance = editInitialBalance ? parseFloat(editInitialBalance) : 0;
+        const accountLogs = logs.filter(l => (l.accountId === editingAccount.id) || (l.account_id === editingAccount.id));
+        const totalTrades = accountLogs.reduce((acc, log) => acc + Number(log.amount || 0), 0);
+        const accountWithdrawals = withdrawals.filter(w => (w.accountId === editingAccount.id) || (w.account_id === editingAccount.id));
+        const totalWithdrawals = accountWithdrawals.reduce((acc, w) => acc + Number(w.grossAmount || w.gross_amount || 0), 0);
+
+        const calculatedInitial = targetBalance - totalTrades + totalWithdrawals;
+
         const updatedData = {
             number: editNumber,
             name: editName,
             type: editType,
             phase: editType === 'demo' ? editPhase : '1',
-            initial_balance: editInitialBalance ? parseFloat(editInitialBalance) : 0,
+            initial_balance: calculatedInitial,
             goal: editGoal ? parseFloat(editGoal) : 0,
             currency: editCurrency
         };
@@ -595,7 +616,7 @@ const AccountsManager = () => {
                                         {/* Cantinho para adicionar/ajustar o saldo da corretora */}
                                         <button
                                             type="button"
-                                            onClick={(e) => startQuickBalanceEdit(e, account)}
+                                            onClick={(e) => startQuickBalanceEdit(e, account, summary.currentBalance)}
                                             title="Clique para ajustar o saldo da corretora"
                                             style={{
                                                 background: 'rgba(0, 210, 255, 0.1)',
@@ -613,7 +634,7 @@ const AccountsManager = () => {
                                             }}
                                         >
                                             <Edit2 size={12} />
-                                            <span>{account.initial_balance ? 'Ajustar' : '+ Adicionar'}</span>
+                                            <span>{(account.initial_balance !== undefined && account.initial_balance !== null && account.initial_balance !== 0) || (summary.currentBalance !== undefined && summary.currentBalance !== null && summary.currentBalance !== 0) ? 'Ajustar' : '+ Adicionar'}</span>
                                         </button>
                                     </div>
 
@@ -682,7 +703,7 @@ const AccountsManager = () => {
                                         </div>
                                     ) : (
                                         <div 
-                                            onClick={(e) => startQuickBalanceEdit(e, account)}
+                                            onClick={(e) => startQuickBalanceEdit(e, account, summary.currentBalance)}
                                             title="Clique para ajustar o saldo da corretora"
                                             style={{
                                                 fontSize: '1.55rem',
@@ -699,8 +720,8 @@ const AccountsManager = () => {
                                         >
                                             <span>
                                                 {isVisible ? (
-                                                    account.initial_balance !== undefined && account.initial_balance !== null && account.initial_balance !== '' ? (
-                                                        formatMoney(account.initial_balance, currency)
+                                                    summary.currentBalance !== undefined && summary.currentBalance !== null ? (
+                                                        formatMoney(summary.currentBalance, currency)
                                                     ) : (
                                                         formatMoney(0, currency)
                                                     )
@@ -708,7 +729,7 @@ const AccountsManager = () => {
                                                     currency === 'USD' ? '$ ••••••' : 'R$ ••••••'
                                                 )}
                                             </span>
-                                            {isVisible && (!account.initial_balance || account.initial_balance === 0) && (
+                                            {isVisible && (!account.initial_balance && !summary.currentBalance) && (
                                                 <span style={{ fontSize: '0.75rem', color: 'rgba(0, 210, 255, 0.8)', fontWeight: 'normal' }}>
                                                     (clique para definir)
                                                 </span>
