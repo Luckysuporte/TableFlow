@@ -19,6 +19,7 @@ const AccountsManager = () => {
     // Modal de Unificação de Mesas
     const [showMergeModal, setShowMergeModal] = useState(false);
     const [sourceAccountToMerge, setSourceAccountToMerge] = useState('');
+    const [targetAccountToMerge, setTargetAccountToMerge] = useState('');
     const [isMerging, setIsMerging] = useState(false);
 
     // Privacy (Olho): controle global e por card individual
@@ -160,22 +161,26 @@ const AccountsManager = () => {
     // Executa a unificação de uma mesa antiga para a mesa selecionada
     const handleMergeSubmit = async (e) => {
         e.preventDefault();
-        if (!sourceAccountToMerge || !selectedAccount) return;
+        const targetId = targetAccountToMerge || selectedAccount?.id;
+        if (!sourceAccountToMerge || !targetId || sourceAccountToMerge === targetId) return;
 
         const sourceAcc = accounts.find(a => a.id === sourceAccountToMerge);
+        const targetAcc = accounts.find(a => a.id === targetId);
+
         const confirmMerge = window.confirm(
-            `Tem certeza que deseja transferir todos os trades de "${sourceAcc?.name}" para "${selectedAccount.name}"?\n\nOs trades manterão as datas originais e o card "${sourceAcc?.name}" será removido.`
+            `Tem certeza que deseja transferir todos os pregões de "${sourceAcc?.name}" para "${targetAcc?.name}"?\n\nOs pregões manterão as datas originais e o card "${sourceAcc?.name}" será removido com segurança.`
         );
 
         if (!confirmMerge) return;
 
         setIsMerging(true);
-        const success = await mergeAccounts(sourceAccountToMerge, selectedAccount.id);
+        const success = await mergeAccounts(sourceAccountToMerge, targetId);
         setIsMerging(false);
 
         if (success) {
             setShowMergeModal(false);
             setSourceAccountToMerge('');
+            setTargetAccountToMerge('');
         }
     };
 
@@ -251,6 +256,36 @@ const AccountsManager = () => {
                         {globalShowBalances ? <EyeOff size={18} /> : <Eye size={18} />}
                         <span>{globalShowBalances ? 'Ocultar Valores' : 'Exibir Valores'}</span>
                     </button>
+
+                    {/* Botão Unificar Mesas no Cabeçalho */}
+                    {accounts.length > 1 && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setTargetAccountToMerge(selectedAccount?.id || (accounts[0] ? accounts[0].id : ''));
+                                setSourceAccountToMerge('');
+                                setShowMergeModal(true);
+                            }}
+                            title="Unificar mesas duplicadas em uma só"
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '10px 16px',
+                                borderRadius: '10px',
+                                background: 'rgba(0, 210, 255, 0.1)',
+                                border: '1px solid rgba(0, 210, 255, 0.35)',
+                                color: '#00d2ff',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                fontWeight: '600',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            <Combine size={18} />
+                            <span>Unificar Mesas</span>
+                        </button>
+                    )}
 
                     {/* Botão Nova Mesa */}
                     <Button onClick={() => setShowAddForm(!showAddForm)} style={{ background: 'linear-gradient(135deg, #7b4397, #00d2ff)', border: 'none' }}>
@@ -1027,7 +1062,7 @@ const AccountsManager = () => {
 
             {/* Modal de Unificação de Mesas */}
             <AnimatePresence>
-                {showMergeModal && selectedAccount && (
+                {showMergeModal && (
                     <div
                         style={{
                             position: 'fixed',
@@ -1050,19 +1085,19 @@ const AccountsManager = () => {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
                             onClick={(e) => e.stopPropagation()}
-                            style={{ width: '100%', maxWidth: '520px' }}
+                            style={{ width: '100%', maxWidth: '540px' }}
                         >
                             <Card style={{ border: '1px solid rgba(0, 210, 255, 0.4)', background: '#131127' }}>
                                 <form onSubmit={handleMergeSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(0, 210, 255, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <Combine size={20} color="#00d2ff" />
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(0, 210, 255, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Combine size={22} color="#00d2ff" />
                                             </div>
                                             <div>
-                                                <h3 style={{ color: 'white', margin: 0, fontSize: '1.2rem' }}>Unificar Mesas</h3>
+                                                <h3 style={{ color: 'white', margin: 0, fontSize: '1.25rem' }}>Unificar Mesas</h3>
                                                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>
-                                                    Mover trades para: <strong style={{ color: '#00d2ff' }}>{selectedAccount.name}</strong>
+                                                    Junte contas duplicadas em uma única mesa
                                                 </span>
                                             </div>
                                         </div>
@@ -1075,13 +1110,14 @@ const AccountsManager = () => {
                                         </button>
                                     </div>
 
-                                    <div style={{ background: 'rgba(0, 210, 255, 0.05)', border: '1px solid rgba(0, 210, 255, 0.15)', borderRadius: '10px', padding: '14px', fontSize: '0.88rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
-                                        💡 Selecione um card antigo (ex: <strong>5PI - agosto</strong> ou <strong>5PI - mês 2</strong>). Todos os pregões dele serão transferidos para esta mesa com as datas originais mantidas, e o card antigo será removido da tela.
+                                    <div style={{ background: 'rgba(0, 210, 255, 0.06)', border: '1px solid rgba(0, 210, 255, 0.2)', borderRadius: '10px', padding: '14px', fontSize: '0.88rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>
+                                        💡 <strong>Como funciona:</strong> Selecione a <strong>Mesa Antiga</strong> (ex: <em>5PI - agosto</em> ou <em>5PI - mês 2</em>) e a <strong>Mesa Principal</strong> (ex: <em>5PI - Setembro</em>). Todos os pregões da mesa antiga serão transferidos mantendo as datas originais, e o card antigo duplicado será removido!
                                     </div>
 
+                                    {/* 1. Mesa Antiga / Origem */}
                                     <div>
-                                        <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', marginBottom: '8px', fontSize: '0.9rem' }}>
-                                            Escolha a mesa de origem para migrar:
+                                        <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '500' }}>
+                                            1. Mesa Antiga / Duplicada (que será transferida e removida):
                                         </label>
                                         <select
                                             value={sourceAccountToMerge}
@@ -1091,21 +1127,56 @@ const AccountsManager = () => {
                                                 width: '100%',
                                                 padding: '12px',
                                                 borderRadius: '8px',
-                                                background: 'rgba(0,0,0,0.5)',
+                                                background: 'rgba(0,0,0,0.6)',
                                                 border: '1px solid rgba(255,255,255,0.2)',
                                                 color: 'white',
                                                 fontSize: '0.95rem',
                                                 outline: 'none'
                                             }}
                                         >
-                                            <option value="" style={{ background: '#1a1a2e', color: 'gray' }}>-- Selecione a mesa para unificar --</option>
+                                            <option value="" style={{ background: '#1a1a2e', color: 'gray' }}>-- Selecione a mesa antiga para transferir --</option>
                                             {accounts
-                                                .filter(a => a.id !== selectedAccount.id)
+                                                .filter(acc => acc.id !== (targetAccountToMerge || selectedAccount?.id))
                                                 .map(acc => {
                                                     const count = logs.filter(l => l.accountId === acc.id || l.account_id === acc.id).length;
                                                     return (
                                                         <option key={acc.id} value={acc.id} style={{ background: '#1a1a2e' }}>
                                                             {acc.name} (#{acc.number}) — {count} pregões registrados
+                                                        </option>
+                                                    );
+                                                })}
+                                        </select>
+                                    </div>
+
+                                    {/* 2. Mesa Principal / Destino */}
+                                    <div>
+                                        <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '500' }}>
+                                            2. Mesa Principal (Destino que receberá os dados e continuará ativa):
+                                        </label>
+                                        <select
+                                            value={targetAccountToMerge || selectedAccount?.id || ''}
+                                            onChange={(e) => setTargetAccountToMerge(e.target.value)}
+                                            required
+                                            style={{
+                                                width: '100%',
+                                                padding: '12px',
+                                                borderRadius: '8px',
+                                                background: 'rgba(0,0,0,0.6)',
+                                                border: '1px solid rgba(0, 210, 255, 0.4)',
+                                                color: '#00d2ff',
+                                                fontSize: '0.95rem',
+                                                fontWeight: 'bold',
+                                                outline: 'none'
+                                            }}
+                                        >
+                                            <option value="" style={{ background: '#1a1a2e', color: 'gray' }}>-- Selecione a mesa principal de destino --</option>
+                                            {accounts
+                                                .filter(acc => acc.id !== sourceAccountToMerge)
+                                                .map(acc => {
+                                                    const count = logs.filter(l => l.accountId === acc.id || l.account_id === acc.id).length;
+                                                    return (
+                                                        <option key={acc.id} value={acc.id} style={{ background: '#1a1a2e', color: 'white' }}>
+                                                            {acc.name} (#{acc.number}) — atualmente com {count} pregões
                                                         </option>
                                                     );
                                                 })}
@@ -1123,14 +1194,14 @@ const AccountsManager = () => {
                                         </Button>
                                         <Button
                                             type="submit"
-                                            disabled={!sourceAccountToMerge || isMerging}
+                                            disabled={!sourceAccountToMerge || !(targetAccountToMerge || selectedAccount?.id) || sourceAccountToMerge === (targetAccountToMerge || selectedAccount?.id) || isMerging}
                                             style={{
                                                 flex: 2,
                                                 padding: '12px',
                                                 background: 'linear-gradient(135deg, #00d2ff, #3a7bd5)',
                                                 border: 'none',
                                                 fontWeight: 'bold',
-                                                opacity: (!sourceAccountToMerge || isMerging) ? 0.5 : 1
+                                                opacity: (!sourceAccountToMerge || !(targetAccountToMerge || selectedAccount?.id) || sourceAccountToMerge === (targetAccountToMerge || selectedAccount?.id) || isMerging) ? 0.5 : 1
                                             }}
                                         >
                                             {isMerging ? 'Unificando...' : 'Unificar e Mover Trades'}
@@ -1240,7 +1311,11 @@ const AccountsManager = () => {
                             {accounts.length > 1 && (
                                 <button
                                     type="button"
-                                    onClick={() => setShowMergeModal(true)}
+                                    onClick={() => {
+                                        setTargetAccountToMerge(selectedAccount.id);
+                                        setSourceAccountToMerge('');
+                                        setShowMergeModal(true);
+                                    }}
                                     title="Mover pregões de outra mesa antiga para esta mesa"
                                     style={{
                                         display: 'flex',
