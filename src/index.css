@@ -193,3 +193,20 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     font-size: 14px;
   }
 }
+
+/* Dashboard Overview Grid Layout */
+.overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.85fr) minmax(0, 1fr);
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+@media (max-width: 992px) {
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+  .hide-on-mobile {
+    display: none !important;
+  }
+}

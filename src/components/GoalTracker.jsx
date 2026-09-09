@@ -7,7 +7,7 @@ import { Target, Edit2, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const GoalTracker = ({ accountId, monthFilter = 'all' }) => {
-    const { goal, updateGoal, getSummary, accounts, updateAccount } = useData();
+    const { goal, updateGoal, getSummary, accounts, updateAccount, privacyMode } = useData();
     const [isEditing, setIsEditing] = useState(false);
 
     // Determine initial values based on context (Global vs Account)
@@ -110,7 +110,7 @@ const GoalTracker = ({ accountId, monthFilter = 'all' }) => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'flex-end' }}>
                         <span style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Progresso</span>
                         <span style={{ fontWeight: 'bold', fontSize: '1.5rem', color: isGoalMet ? '#00d2ff' : 'white', textShadow: isGoalMet ? '0 0 10px rgba(0,210,255,0.5)' : 'none' }}>
-                            {progress.toFixed(1)}%
+                            {privacyMode ? `${progress.toFixed(1)}%` : '••%'}
                         </span>
                     </div>
 
@@ -136,7 +136,7 @@ const GoalTracker = ({ accountId, monthFilter = 'all' }) => {
                             <div style={{ background: 'rgba(0, 210, 255, 0.05)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0, 210, 255, 0.15)' }}>
                                 <div style={{ fontSize: '0.8rem', color: '#00d2ff', marginBottom: '5px' }}>Saldo Total da Conta</div>
                                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>
-                                    {currencySymbol} {currentBalance.toLocaleString()}
+                                    {privacyMode ? `${currencySymbol} ${currentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '••••••'}
                                 </div>
                             </div>
                         )}
@@ -145,7 +145,7 @@ const GoalTracker = ({ accountId, monthFilter = 'all' }) => {
                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                             <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '5px' }}>Meta Total</div>
                             <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
-                                {currencySymbol} {accountId ? (currentAccount?.goal || 0).toLocaleString() : Number(goal.amount).toLocaleString()}
+                                {currencySymbol} {accountId ? (currentAccount?.goal || 0).toLocaleString('pt-BR') : Number(goal.amount).toLocaleString('pt-BR')}
                             </div>
                         </div>
 
@@ -154,14 +154,16 @@ const GoalTracker = ({ accountId, monthFilter = 'all' }) => {
                                 {monthFilter && monthFilter !== 'all' ? 'Resultado do Mês' : 'Acumulado Geral'}
                             </div>
                             <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: activeResult > 0 ? '#00d2ff' : activeResult < 0 ? '#dc2430' : 'white' }}>
-                                {activeResult > 0 ? '+' : ''}{currencySymbol} {activeResult.toLocaleString()}
+                                {privacyMode ? (
+                                    `${activeResult > 0 ? '+' : ''}${currencySymbol} ${activeResult.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                ) : '••••••'}
                             </div>
                         </div>
 
                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                             <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '5px' }}>Falta</div>
                             <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: isGoalMet ? '#10b981' : 'white' }}>
-                                {isGoalMet ? 'Alcançada! 🎯' : `${currencySymbol} ${remaining.toLocaleString()}`}
+                                {isGoalMet ? 'Alcançada! 🎯' : privacyMode ? `${currencySymbol} ${remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '••••••'}
                             </div>
                         </div>
                     </div>

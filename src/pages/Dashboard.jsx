@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import Button from '../components/Button';
 import GoalTracker from '../components/GoalTracker';
 import AccountsManager from '../components/AccountsManager';
 import WithdrawalManager from '../components/WithdrawalManager';
-import QuickActions from '../components/QuickActions';
+import OverviewMetrics from '../components/OverviewMetrics';
+import EquityChart from '../components/EquityChart';
 import RecentActivity from '../components/RecentActivity';
 import ReportsPage from '../components/ReportsPage';
 import ProfilePage from './ProfilePage';
 import SettingsPage from './SettingsPage';
-import { ActiveTablesCard, AlertsCard, WithdrawalSummaryCard } from '../components/SummaryCards';
-import { LogOut, LayoutDashboard, Monitor, Wallet, User, Settings, ChevronDown, FileText } from 'lucide-react';
+import { ActiveTablesCard, TopAccountsCard, AlertsCard, WithdrawalSummaryCard } from '../components/SummaryCards';
+import { LogOut, LayoutDashboard, Monitor, Wallet, User, Settings, ChevronDown, FileText, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Dashboard = () => {
     const { user, logout } = useAuth();
+    const { privacyMode, togglePrivacyMode } = useData();
     const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'accounts', 'withdrawals', 'reports'
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
@@ -54,7 +57,32 @@ const Dashboard = () => {
                         <span style={{ fontWeight: 'bold', fontSize: '1.3rem', letterSpacing: '0.5px', color: 'white' }}>TableFlow</span>
                     </button>
 
-                    <div style={{ position: 'relative' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {/* Botão Global de Privacidade (Olho) */}
+                        <button
+                            onClick={togglePrivacyMode}
+                            title={privacyMode ? "Ocultar saldos e valores" : "Exibir saldos e valores"}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                background: privacyMode ? 'rgba(255,255,255,0.05)' : 'rgba(0, 210, 255, 0.15)',
+                                border: privacyMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0, 210, 255, 0.4)',
+                                padding: '7px 14px',
+                                borderRadius: '30px',
+                                cursor: 'pointer',
+                                color: privacyMode ? 'rgba(255,255,255,0.75)' : '#00d2ff',
+                                transition: 'all 0.2s',
+                                fontSize: '0.85rem',
+                                fontWeight: '500'
+                            }}
+                            className="hover-neon"
+                        >
+                            {privacyMode ? <EyeOff size={16} /> : <Eye size={16} />}
+                            <span className="hide-on-mobile">{privacyMode ? 'Ocultar' : 'Exibir'}</span>
+                        </button>
+
+                        <div style={{ position: 'relative' }}>
                         <button
                             onClick={() => setShowUserMenu(!showUserMenu)}
                             style={{
@@ -141,7 +169,8 @@ const Dashboard = () => {
                         </AnimatePresence>
                     </div>
                 </div>
-            </nav>
+            </div>
+        </nav>
 
             <main className="container" style={{ marginTop: '40px' }}>
                 {/* Tabs Navigation */}
@@ -212,22 +241,27 @@ const Dashboard = () => {
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.3 }}
                         >
-                            {/* Quick Actions Panel */}
-                            <QuickActions setActiveTab={setActiveTab} />
+                            {/* Métricas Principais em Tempo Real (4 KPIs) */}
+                            <OverviewMetrics />
 
-                            {/* Dashboard Grid Layout */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-                                <div style={{ gridColumn: 'span 2' }}> {/* Goal Tracker takes 2 columns on wide screens */}
+                            {/* Grid Principal da Visão Geral */}
+                            <div className="overview-grid">
+                                {/* Coluna Principal (Esquerda): Meta e Curva de Capital */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                     <GoalTracker />
+                                    <EquityChart />
                                 </div>
+
+                                {/* Coluna Lateral (Direita): Mesas Ativas, Destaques do Mês, Gestão de Saques e Alertas */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     <ActiveTablesCard />
+                                    <TopAccountsCard />
                                     <WithdrawalSummaryCard />
                                     <AlertsCard />
                                 </div>
                             </div>
 
-                            {/* Bottom Section */}
+                            {/* Seção Inferior: Últimas Movimentações com Moedas e Registro Rápido */}
                             <RecentActivity />
                         </motion.div>
                     )}

@@ -15,6 +15,20 @@ export const DataProvider = ({ children }) => {
     const [withdrawals, setWithdrawals] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Modo de Privacidade Global (ocultar/exibir valores em todo o app)
+    const [privacyMode, setPrivacyMode] = useState(() => {
+        const saved = localStorage.getItem('tableflow_privacy_balances');
+        return saved !== 'false';
+    });
+
+    const togglePrivacyMode = () => {
+        setPrivacyMode(prev => {
+            const next = !prev;
+            localStorage.setItem('tableflow_privacy_balances', next.toString());
+            return next;
+        });
+    };
+
     // Load data from Supabase when user logs in
     useEffect(() => {
         if (user?.id) {
@@ -642,6 +656,129 @@ export const DataProvider = ({ children }) => {
         };
     };
 
+    // Métricas Agregadas de Alta Performance para a Visão Geral
+    const getOverviewKPIs = () => {
+        const now = new Date();
+        const curYear = now.getFullYear();
+        const curMonth = String(now.getMonth() + 1).padStart(2, '0');
+        const curDay = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${curYear}-${curMonth}-${curDay}`;
+        const currentMonthStr = `${curYear}-${curMonth}`;
+
+        const accountMap = new Map();
+        accounts.forEach(acc => accountMap.set(acc.id, acc));
+
+        // 1. Hoje
+        let todayResultBRL = 0;
+        let todayResultUSD = 0;
+
+        // 2. Mês Atual
+        let monthResultBRL = 0;
+        let monthResultUSD = 0;
+
+        logs.forEach(log => {
+            const accId = log.accountId || log.account_id;
+            const acc = accountMap.get(accId);
+            const currency = acc?.currency || 'BRL';
+            const amount = Number(log.amount || 0);
+
+            if (log.date === todayStr) {
+                if (currency === 'USD') todayResultUSD += amount;
+                else todayResultBRL += amount;
+            }
+
+            if (log.date && log.date.startsWith(currentMonthStr)) {
+                if (currency === 'USD') monthResultUSD += amount;
+                else monthResultBRL += amount;
+            }
+        });
+
+        // 3. Capital Sob Gestão (Saldos em Corretora das Contas Reais)
+        let totalBalanceBRL = 0;
+        let totalBalanceUSD = 0;
+
+        const realAccounts = accounts.filter(a => a.type === 'real');
+        realAccounts.forEach(acc => {
+            const initial = Number(acc.initial_balance || 0);
+            const currency = acc.currency || 'BRL';
+            const accLogs = logs.filter(l => (l.accountId === acc.id || l.account_id === acc.id));
+            const accProfit = accLogs.reduce((sum, l) => sum + Number(l.amount || 0), 0);
+            const accW = withdrawals.filter(w => (w.accountId === acc.id || w.account_id === acc.id));
+            const accWithdrawn = accW.reduce((sum, w) => sum + Number(w.grossAmount || w.gross_amount || 0), 0);
+            const available = initial + accProfit - accWithdrawn;
+            const positiveAvailable = available > 0 ? available : 0;
+
+            if (currency === 'USD') totalBalanceUSD += positiveAvailable;
+            else totalBalanceBRL += positiveAvailable;
+        });
+
+        // 4. Win Rate do Mês Atual (Agrupado por dia de pregão)
+        const monthLogs = logs.filter(l => l.date && l.date.startsWith(currentMonthStr));
+        const dayPnlMap = {};
+        monthLogs.forEach(l => {
+            dayPnlMap[l.date] = (dayPnlMap[l.date] || 0) + Number(l.amount || 0);
+        });
+
+        const tradingDays = Object.keys(dayPnlMap);
+        const winDaysCount = tradingDays.filter(d => dayPnlMap[d] > 0).length;
+        const lossDaysCount = tradingDays.filter(d => dayPnlMap[d] < 0).length;
+        const totalTradingDays = tradingDays.length;
+        const winRate = totalTradingDays > 0 ? Math.round((winDaysCount / totalTradingDays) * 100) : 0;
+
+        // 5. Dados da Curva de Capital (Equity Curve)
+        const allDaysMap = {};
+        logs.forEach(l => {
+            if (!l.date) return;
+            allDaysMap[l.date] = (allDaysMap[l.date] || 0) + Number(l.amount || 0);
+        });
+
+        const sortedDates = Object.keys(allDaysMap).sort();
+        let runningAccumulated = 0;
+        const equityCurveData = sortedDates.map(d => {
+            const daily = allDaysMap[d];
+            runningAccumulated += daily;
+            const [y, m, day] = d.split('-');
+            return {
+                date: `${day}/${m}`,
+                fullDate: d,
+                daily,
+                accumulated: runningAccumulated
+            };
+        });
+
+        // 6. Ranking das Melhores Mesas do Mês
+        const accountsPerformance = accounts.map(acc => {
+            const accLogs = logs.filter(l => (l.accountId === acc.id || l.account_id === acc.id) && l.date && l.date.startsWith(currentMonthStr));
+            const monthProfit = accLogs.reduce((sum, l) => sum + Number(l.amount || 0), 0);
+            return {
+                id: acc.id,
+                name: acc.name,
+                number: acc.number,
+                type: acc.type,
+                currency: acc.currency || 'BRL',
+                monthProfit,
+                tradesCount: accLogs.length
+            };
+        }).sort((a, b) => b.monthProfit - a.monthProfit);
+
+        return {
+            todayStr,
+            currentMonthStr,
+            todayResultBRL,
+            todayResultUSD,
+            monthResultBRL,
+            monthResultUSD,
+            totalBalanceBRL,
+            totalBalanceUSD,
+            winRate,
+            winDaysCount,
+            lossDaysCount,
+            totalTradingDays,
+            equityCurveData,
+            accountsPerformance
+        };
+    };
+
     if (loading) {
         return (
             <div style={{
@@ -662,6 +799,8 @@ export const DataProvider = ({ children }) => {
             accounts,
             logs,
             withdrawals,
+            privacyMode,
+            togglePrivacyMode,
             updateGoal,
             addAccount,
             updateAccount,
@@ -671,7 +810,8 @@ export const DataProvider = ({ children }) => {
             deleteLog,
             addWithdrawal,
             deleteWithdrawal,
-            getSummary
+            getSummary,
+            getOverviewKPIs
         }}>
             {children}
         </DataContext.Provider>
