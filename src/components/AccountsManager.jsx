@@ -53,6 +53,7 @@ const AccountsManager = () => {
     const [accountName, setAccountName] = useState('');
     const [accountInitialBalance, setAccountInitialBalance] = useState('');
     const [accountGoal, setAccountGoal] = useState('');
+    const [accountMaxLoss, setAccountMaxLoss] = useState('');
     const [accountCurrency, setAccountCurrency] = useState('BRL'); // 'BRL' ou 'USD'
     const [accountType, setAccountType] = useState('demo'); // 'demo' ou 'real'
     const [accountPhase, setAccountPhase] = useState('1'); // '1', '2', ou 'unica'
@@ -63,6 +64,7 @@ const AccountsManager = () => {
     const [editName, setEditName] = useState('');
     const [editInitialBalance, setEditInitialBalance] = useState('');
     const [editGoal, setEditGoal] = useState('');
+    const [editMaxLoss, setEditMaxLoss] = useState('');
     const [editCurrency, setEditCurrency] = useState('BRL');
     const [editType, setEditType] = useState('demo');
     const [editPhase, setEditPhase] = useState('1');
@@ -111,6 +113,7 @@ const AccountsManager = () => {
             : (account.initial_balance !== undefined && account.initial_balance !== null ? account.initial_balance : '');
         setEditInitialBalance(currentBal !== '' ? currentBal : '');
         setEditGoal(account.goal !== undefined && account.goal !== null ? account.goal : '');
+        setEditMaxLoss(account.max_loss !== undefined && account.max_loss !== null ? account.max_loss : '');
         setEditCurrency(account.currency || 'BRL');
         setEditType(account.type || 'demo');
         setEditPhase(account.phase || '1');
@@ -131,6 +134,7 @@ const AccountsManager = () => {
             phase: accountType === 'demo' ? accountPhase : '1',
             initial_balance: accountInitialBalance ? parseFloat(accountInitialBalance) : 0,
             goal: accountGoal ? parseFloat(accountGoal) : 0,
+            max_loss: accountMaxLoss ? parseFloat(accountMaxLoss) : 0,
             currency: accountCurrency,
             createdAt: new Date().toISOString()
         });
@@ -141,6 +145,7 @@ const AccountsManager = () => {
             setAccountName('');
             setAccountInitialBalance('');
             setAccountGoal('');
+            setAccountMaxLoss('');
             setAccountCurrency('BRL');
             setAccountType('demo');
             setAccountPhase('1');
@@ -167,6 +172,7 @@ const AccountsManager = () => {
             phase: editType === 'demo' ? editPhase : '1',
             initial_balance: calculatedInitial,
             goal: editGoal ? parseFloat(editGoal) : 0,
+            max_loss: editMaxLoss ? parseFloat(editMaxLoss) : 0,
             currency: editCurrency
         };
 
@@ -355,7 +361,7 @@ const AccountsManager = () => {
                                     />
                                 </div>
 
-                                {/* Saldo da Conta, Meta e Moeda */}
+                                {/* Saldo da Conta, Meta, Perda Máxima e Moeda */}
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
                                     <NeonInput
                                         label={`Saldo da Conta / Banca (${accountCurrency === 'USD' ? '$' : 'R$'})`}
@@ -372,6 +378,14 @@ const AccountsManager = () => {
                                         value={accountGoal}
                                         onChange={(e) => setAccountGoal(e.target.value)}
                                         placeholder="Ex: 10000"
+                                    />
+                                    <NeonInput
+                                        label={`Perda Máxima / Drawdown (${accountCurrency === 'USD' ? '$' : 'R$'})`}
+                                        type="number"
+                                        step="any"
+                                        value={accountMaxLoss}
+                                        onChange={(e) => setAccountMaxLoss(e.target.value)}
+                                        placeholder="Ex: 2500"
                                     />
 
                                     <div>
@@ -792,43 +806,79 @@ const AccountsManager = () => {
                                     </div>
                                 </div>
 
-                                {/* Bloco da Meta e Quanto Falta (se configurado) */}
-                                {summary.targetAmount > 0 && (
-                                    <div style={{
-                                        background: 'rgba(255, 255, 255, 0.02)',
-                                        border: '1px solid rgba(255, 255, 255, 0.05)',
-                                        borderRadius: '10px',
-                                        padding: '10px 12px',
-                                        marginBottom: '12px'
-                                    }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', marginBottom: '6px' }}>
-                                            <span style={{ color: 'rgba(255,255,255,0.5)' }}>
-                                                Meta: {formatMoney(summary.targetAmount, currency)}
-                                            </span>
-                                            <span style={{
-                                                fontWeight: '600',
-                                                color: summary.isGoalMet ? '#10b981' : '#f59e0b'
-                                            }}>
-                                                {summary.isGoalMet ? (
-                                                    'Meta Batida! 🎯'
-                                                ) : isVisible ? (
-                                                    `Falta: ${formatMoney(summary.remaining, currency)}`
-                                                ) : 'Falta: ••••••'}
-                                            </span>
-                                        </div>
+                                {/* Bloco da Meta / Perda Máxima com barra de progresso */}
+                                {(summary.targetAmount > 0 || summary.maxLoss > 0) && (() => {
+                                    const isNegative = summary.totalResult < 0;
+                                    const showLossBar = isNegative && summary.maxLoss > 0;
 
-                                        {/* Barra de Progresso da Meta */}
-                                        <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
-                                            <div style={{
-                                                width: `${summary.progress}%`,
-                                                height: '100%',
-                                                background: summary.isGoalMet ? 'linear-gradient(90deg, #10b981, #00d2ff)' : 'linear-gradient(90deg, #a855f7, #00d2ff)',
-                                                borderRadius: '4px',
-                                                transition: 'width 0.4s ease'
-                                            }} />
+                                    return (
+                                        <div style={{
+                                            background: showLossBar ? 'rgba(220, 36, 48, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                                            border: showLossBar ? '1px solid rgba(220, 36, 48, 0.15)' : '1px solid rgba(255, 255, 255, 0.05)',
+                                            borderRadius: '10px',
+                                            padding: '10px 12px',
+                                            marginBottom: '12px'
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', marginBottom: '6px' }}>
+                                                {showLossBar ? (
+                                                    <>
+                                                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>
+                                                            Perda: {isVisible ? formatMoney(Math.abs(summary.totalResult), currency) : '••••••'} / {formatMoney(summary.maxLoss, currency)}
+                                                        </span>
+                                                        <span style={{
+                                                            fontWeight: '600',
+                                                            color: summary.isAccountBlown ? '#ef4444' : '#f59e0b'
+                                                        }}>
+                                                            {summary.isAccountBlown ? (
+                                                                '⚠️ Conta Estourada!'
+                                                            ) : isVisible ? (
+                                                                `Resta: ${formatMoney(summary.maxLoss - Math.abs(summary.totalResult), currency)}`
+                                                            ) : 'Resta: ••••••'}
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>
+                                                            Meta: {formatMoney(summary.targetAmount, currency)}
+                                                        </span>
+                                                        <span style={{
+                                                            fontWeight: '600',
+                                                            color: summary.isGoalMet ? '#10b981' : '#f59e0b'
+                                                        }}>
+                                                            {summary.isGoalMet ? (
+                                                                'Meta Batida! 🎯'
+                                                            ) : isVisible ? (
+                                                                `Falta: ${formatMoney(summary.remaining, currency)}`
+                                                            ) : 'Falta: ••••••'}
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </div>
+
+                                            {/* Barra de Progresso */}
+                                            <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
+                                                <div style={{
+                                                    width: showLossBar
+                                                        ? `${summary.lossProgress}%`
+                                                        : `${summary.progress}%`,
+                                                    height: '100%',
+                                                    background: showLossBar
+                                                        ? (summary.isAccountBlown
+                                                            ? 'linear-gradient(90deg, #ef4444, #dc2430)'
+                                                            : 'linear-gradient(90deg, #f59e0b, #dc2430)')
+                                                        : (summary.isGoalMet
+                                                            ? 'linear-gradient(90deg, #10b981, #00d2ff)'
+                                                            : 'linear-gradient(90deg, #a855f7, #00d2ff)'),
+                                                    borderRadius: '4px',
+                                                    transition: 'width 0.4s ease',
+                                                    boxShadow: showLossBar
+                                                        ? '0 0 8px rgba(220, 36, 48, 0.4)'
+                                                        : 'none'
+                                                }} />
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    );
+                                })()}
 
                                 {/* Tags do Rodapé */}
                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -949,6 +999,15 @@ const AccountsManager = () => {
                                             placeholder="Ex: 10000"
                                         />
                                     </div>
+
+                                    <NeonInput
+                                        label={`Perda Máxima / Drawdown (${editCurrency === 'USD' ? '$' : 'R$'})`}
+                                        type="number"
+                                        step="any"
+                                        value={editMaxLoss}
+                                        onChange={(e) => setEditMaxLoss(e.target.value)}
+                                        placeholder="Ex: 2500 (limite antes de perder a conta)"
+                                    />
 
                                     {/* Escolha da Moeda */}
                                     <div>

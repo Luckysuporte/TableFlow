@@ -308,7 +308,8 @@ export const DataProvider = ({ children }) => {
                 phase: account.phase,
                 goal: account.goal !== undefined && account.goal !== '' ? Number(account.goal) : 0,
                 initial_balance: account.initial_balance !== undefined && account.initial_balance !== '' ? Number(account.initial_balance) : 0,
-                currency: account.currency || 'BRL'
+                currency: account.currency || 'BRL',
+                max_loss: account.max_loss !== undefined && account.max_loss !== '' ? Number(account.max_loss) : 0
             };
 
             let { data, error } = await supabase
@@ -318,8 +319,8 @@ export const DataProvider = ({ children }) => {
                 .single();
 
             // Se a coluna ainda não foi criada no Supabase pelo usuário, fazer fallback seguro
-            if (error && (error.message?.includes('initial_balance') || error.message?.includes('currency'))) {
-                console.warn('Colunas initial_balance/currency ainda não criadas no Supabase. Salvando campos padrão.');
+            if (error && (error.message?.includes('initial_balance') || error.message?.includes('currency') || error.message?.includes('max_loss'))) {
+                console.warn('Colunas initial_balance/currency/max_loss ainda não criadas no Supabase. Salvando campos padrão.');
                 const fallbackPayload = {
                     user_id: user.id,
                     number: account.number,
@@ -335,7 +336,8 @@ export const DataProvider = ({ children }) => {
                 data = {
                     ...retry.data,
                     initial_balance: accountPayload.initial_balance,
-                    currency: accountPayload.currency
+                    currency: accountPayload.currency,
+                    max_loss: accountPayload.max_loss
                 };
                 error = null;
             }
@@ -365,6 +367,9 @@ export const DataProvider = ({ children }) => {
             if (updatePayload.initial_balance !== undefined && updatePayload.initial_balance !== null && updatePayload.initial_balance !== '') {
                 updatePayload.initial_balance = Number(updatePayload.initial_balance);
             }
+            if (updatePayload.max_loss !== undefined && updatePayload.max_loss !== null && updatePayload.max_loss !== '') {
+                updatePayload.max_loss = Number(updatePayload.max_loss);
+            }
 
             let { error } = await supabase
                 .from('accounts')
@@ -373,9 +378,9 @@ export const DataProvider = ({ children }) => {
                 .eq('user_id', user.id);
 
             // Fallback se colunas ainda não existirem no Supabase
-            if (error && (error.message?.includes('initial_balance') || error.message?.includes('currency'))) {
-                console.warn('Colunas initial_balance/currency ausentes no Supabase. Atualizando campos compatíveis.');
-                const { initial_balance, currency, ...fallbackPayload } = updatePayload;
+            if (error && (error.message?.includes('initial_balance') || error.message?.includes('currency') || error.message?.includes('max_loss'))) {
+                console.warn('Colunas initial_balance/currency/max_loss ausentes no Supabase. Atualizando campos compatíveis.');
+                const { initial_balance, currency, max_loss, ...fallbackPayload } = updatePayload;
                 const retry = await supabase
                     .from('accounts')
                     .update(fallbackPayload)
@@ -613,6 +618,7 @@ export const DataProvider = ({ children }) => {
         let currency = 'BRL';
         let accountWithdrawalsTotal = 0;
         let todayResult = 0;
+        let maxLoss = 0;
 
         if (accountId) {
             const account = accounts.find(a => a.id === accountId);
@@ -622,6 +628,7 @@ export const DataProvider = ({ children }) => {
                 }
                 initialBalance = Number(account.initial_balance || 0);
                 currency = account.currency || 'BRL';
+                maxLoss = Number(account.max_loss || 0);
             }
 
             const todayLogs = accountLogs.filter(log => log.date === todayStr);
@@ -640,6 +647,12 @@ export const DataProvider = ({ children }) => {
         const remaining = targetAmount - activeResultForGoal;
         const progress = targetAmount > 0 ? (activeResultForGoal / targetAmount) * 100 : 0;
 
+        // Cálculo da barra de perda (drawdown) para prop firms
+        const lossProgress = (maxLoss > 0 && activeResultForGoal < 0)
+            ? Math.min((Math.abs(activeResultForGoal) / maxLoss) * 100, 100)
+            : 0;
+        const isAccountBlown = maxLoss > 0 && activeResultForGoal < 0 && Math.abs(activeResultForGoal) >= maxLoss;
+
         return {
             totalResult,
             selectedMonthResult,
@@ -650,9 +663,12 @@ export const DataProvider = ({ children }) => {
             accountWithdrawalsTotal,
             currency,
             targetAmount,
+            maxLoss,
             remaining: remaining > 0 ? remaining : 0,
             progress: Math.min(Math.max(progress, 0), 100),
-            isGoalMet: targetAmount > 0 && activeResultForGoal >= targetAmount
+            lossProgress,
+            isGoalMet: targetAmount > 0 && activeResultForGoal >= targetAmount,
+            isAccountBlown
         };
     };
 

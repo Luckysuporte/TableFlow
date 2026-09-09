@@ -28,9 +28,11 @@ const GoalTracker = ({ accountId, monthFilter = 'all' }) => {
         }
     }, [accountId, currentAccount, goal, isEditing]);
 
-    const { totalResult, selectedMonthResult, remaining, progress, isGoalMet, currentBalance, initialBalance, currency } = getSummary(accountId, monthFilter);
+    const { totalResult, selectedMonthResult, remaining, progress, isGoalMet, currentBalance, initialBalance, currency, maxLoss, lossProgress, isAccountBlown } = getSummary(accountId, monthFilter);
     const currencySymbol = (accountId && (currentAccount?.currency === 'USD' || currency === 'USD')) ? '$' : 'R$';
     const activeResult = (monthFilter && monthFilter !== 'all') ? selectedMonthResult : totalResult;
+    const isNegative = activeResult < 0;
+    const showLossBar = isNegative && maxLoss > 0;
 
     const handleSave = () => {
         if (accountId) {
@@ -53,24 +55,32 @@ const GoalTracker = ({ accountId, monthFilter = 'all' }) => {
     const title = accountId ? (monthFilter && monthFilter !== 'all' ? `Meta Mensal: ${getMonthLabel(monthFilter)}` : 'Meta da Mesa') : (goal.name || 'Objetivo Financeiro');
     const subtitle = accountId ? (monthFilter && monthFilter !== 'all' ? `Progresso referente a ${getMonthLabel(monthFilter)}` : 'Progresso acumulado desta conta') : 'Progresso baseado em saques realizados';
 
+    // Determine progress bar values
+    const barProgress = showLossBar ? lossProgress : progress;
+    const barLabel = showLossBar
+        ? `${lossProgress.toFixed(1)}%`
+        : `${progress.toFixed(1)}%`;
+
     return (
         <Card className="glass-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                     <div className="flex-center" style={{
                         width: '50px', height: '50px', borderRadius: '12px',
-                        background: 'linear-gradient(135deg, rgba(123, 67, 151, 0.2), rgba(220, 36, 48, 0.2))',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        boxShadow: '0 0 15px rgba(123, 67, 151, 0.3)'
+                        background: showLossBar
+                            ? 'linear-gradient(135deg, rgba(220, 36, 48, 0.2), rgba(239, 68, 68, 0.2))'
+                            : 'linear-gradient(135deg, rgba(123, 67, 151, 0.2), rgba(220, 36, 48, 0.2))',
+                        border: showLossBar ? '1px solid rgba(220, 36, 48, 0.2)' : '1px solid rgba(255,255,255,0.1)',
+                        boxShadow: showLossBar ? '0 0 15px rgba(220, 36, 48, 0.3)' : '0 0 15px rgba(123, 67, 151, 0.3)'
                     }}>
-                        <Target size={24} color="#fff" style={{ filter: 'drop-shadow(0 0 5px #a855f7)' }} />
+                        <Target size={24} color={showLossBar ? '#dc2430' : '#fff'} style={{ filter: showLossBar ? 'drop-shadow(0 0 5px #dc2430)' : 'drop-shadow(0 0 5px #a855f7)' }} />
                     </div>
                     <div>
                         <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '4px' }}>
-                            {title}
+                            {showLossBar ? 'Controle de Drawdown' : title}
                         </h3>
                         <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
-                            {subtitle}
+                            {showLossBar ? 'Limite de perda máxima da conta' : subtitle}
                         </span>
                     </div>
                 </div>
@@ -108,24 +118,41 @@ const GoalTracker = ({ accountId, monthFilter = 'all' }) => {
             ) : (
                 <>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'flex-end' }}>
-                        <span style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Progresso</span>
-                        <span style={{ fontWeight: 'bold', fontSize: '1.5rem', color: isGoalMet ? '#00d2ff' : 'white', textShadow: isGoalMet ? '0 0 10px rgba(0,210,255,0.5)' : 'none' }}>
-                            {privacyMode ? `${progress.toFixed(1)}%` : '••%'}
+                        <span style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                            {showLossBar ? 'Drawdown Utilizado' : 'Progresso'}
+                        </span>
+                        <span style={{
+                            fontWeight: 'bold',
+                            fontSize: '1.5rem',
+                            color: showLossBar
+                                ? (isAccountBlown ? '#ef4444' : '#f59e0b')
+                                : (isGoalMet ? '#00d2ff' : 'white'),
+                            textShadow: showLossBar
+                                ? (isAccountBlown ? '0 0 10px rgba(239,68,68,0.5)' : '0 0 10px rgba(245,158,11,0.5)')
+                                : (isGoalMet ? '0 0 10px rgba(0,210,255,0.5)' : 'none')
+                        }}>
+                            {privacyMode ? barLabel : '••%'}
                         </span>
                     </div>
 
-                    <div style={{ width: '100%', height: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', overflow: 'hidden', marginBottom: '25px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ width: '100%', height: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', overflow: 'hidden', marginBottom: '25px', border: showLossBar ? '1px solid rgba(220,36,48,0.15)' : '1px solid rgba(255,255,255,0.05)' }}>
                         <motion.div
                             initial={{ width: 0 }}
-                            animate={{ width: `${progress}%` }}
+                            animate={{ width: `${barProgress}%` }}
                             transition={{ duration: 1.5, ease: "easeOut" }}
                             style={{
                                 height: '100%',
-                                background: isGoalMet
-                                    ? 'linear-gradient(90deg, #00d2ff, #3a7bd5)'
-                                    : 'linear-gradient(90deg, #a855f7, #dc2430)',
+                                background: showLossBar
+                                    ? (isAccountBlown
+                                        ? 'linear-gradient(90deg, #ef4444, #dc2430)'
+                                        : 'linear-gradient(90deg, #f59e0b, #dc2430)')
+                                    : (isGoalMet
+                                        ? 'linear-gradient(90deg, #00d2ff, #3a7bd5)'
+                                        : 'linear-gradient(90deg, #a855f7, #dc2430)'),
                                 borderRadius: '8px',
-                                boxShadow: isGoalMet ? '0 0 20px rgba(0,210,255,0.4)' : '0 0 20px rgba(220, 36, 48, 0.4)'
+                                boxShadow: showLossBar
+                                    ? '0 0 20px rgba(220, 36, 48, 0.4)'
+                                    : (isGoalMet ? '0 0 20px rgba(0,210,255,0.4)' : '0 0 20px rgba(220, 36, 48, 0.4)')
                             }}
                         />
                     </div>
@@ -141,11 +168,16 @@ const GoalTracker = ({ accountId, monthFilter = 'all' }) => {
                             </div>
                         )}
 
-                        {/* Main Stats */}
-                        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '5px' }}>Meta Total</div>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
-                                {currencySymbol} {accountId ? (currentAccount?.goal || 0).toLocaleString('pt-BR') : Number(goal.amount).toLocaleString('pt-BR')}
+                        {/* Meta ou Perda Máxima */}
+                        <div style={{ background: showLossBar ? 'rgba(220, 36, 48, 0.05)' : 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', border: showLossBar ? '1px solid rgba(220, 36, 48, 0.15)' : '1px solid rgba(255,255,255,0.05)' }}>
+                            <div style={{ fontSize: '0.8rem', color: showLossBar ? '#dc2430' : 'rgba(255,255,255,0.5)', marginBottom: '5px' }}>
+                                {showLossBar ? 'Perda Máxima' : 'Meta Total'}
+                            </div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: showLossBar ? '#dc2430' : 'white' }}>
+                                {showLossBar
+                                    ? `${currencySymbol} ${maxLoss.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                    : `${currencySymbol} ${(accountId ? (currentAccount?.goal || 0) : Number(goal.amount)).toLocaleString('pt-BR')}`
+                                }
                             </div>
                         </div>
 
@@ -161,14 +193,21 @@ const GoalTracker = ({ accountId, monthFilter = 'all' }) => {
                         </div>
 
                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '5px' }}>Falta</div>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: isGoalMet ? '#10b981' : 'white' }}>
-                                {isGoalMet ? 'Alcançada! 🎯' : privacyMode ? `${currencySymbol} ${remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '••••••'}
+                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '5px' }}>
+                                {showLossBar ? 'Ainda Pode Perder' : 'Falta'}
+                            </div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: showLossBar ? (isAccountBlown ? '#ef4444' : '#f59e0b') : (isGoalMet ? '#10b981' : 'white') }}>
+                                {showLossBar
+                                    ? (isAccountBlown
+                                        ? '⚠️ Estourada!'
+                                        : (privacyMode ? `${currencySymbol} ${(maxLoss - Math.abs(activeResult)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '••••••'))
+                                    : (isGoalMet ? 'Alcançada! 🎯' : (privacyMode ? `${currencySymbol} ${remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '••••••'))
+                                }
                             </div>
                         </div>
                     </div>
 
-                    {isGoalMet && (
+                    {isGoalMet && !showLossBar && (
                         <motion.div
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
@@ -180,6 +219,22 @@ const GoalTracker = ({ accountId, monthFilter = 'all' }) => {
                             <div>
                                 <strong style={{ display: 'block' }}>Parabéns! Meta atingida.</strong>
                                 <span style={{ fontSize: '0.9rem', opacity: 0.8 }}>Você atingiu o objetivo desta conta!</span>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {isAccountBlown && showLossBar && (
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            style={{ marginTop: '20px', padding: '15px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '15px', color: '#ef4444' }}
+                        >
+                            <div style={{ background: '#ef4444', borderRadius: '50%', padding: '5px', color: '#fff' }}>
+                                <CheckCircle size={20} />
+                            </div>
+                            <div>
+                                <strong style={{ display: 'block' }}>⚠️ Drawdown máximo atingido.</strong>
+                                <span style={{ fontSize: '0.9rem', opacity: 0.8 }}>A perda acumulada excedeu o limite configurado.</span>
                             </div>
                         </motion.div>
                     )}

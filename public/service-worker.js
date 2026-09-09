@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tableflow-v3';
+const CACHE_NAME = 'tableflow-v4';
 const urlsToCache = [
     '/',
     '/index.html',
