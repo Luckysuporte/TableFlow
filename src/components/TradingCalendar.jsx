@@ -396,20 +396,15 @@ const TradingCalendar = ({
                                     }}>
                                         <div style={{
                                             fontWeight: '700',
-                                            fontSize: '0.85rem',
+                                            fontSize: '0.9rem',
+                                            textAlign: 'center',
                                             color: isWin ? '#34d399' : '#f87171',
                                             whiteSpace: 'nowrap',
                                             overflow: 'hidden',
-                                            textOverflow: 'ellipsis'
+                                            textOverflow: 'ellipsis',
+                                            padding: '4px 0'
                                         }}>
                                             {isWin ? '+' : '-'}{currencySymbol} {formatCurrency(dayLog.total)}
-                                        </div>
-                                        <div style={{
-                                            fontSize: '0.7rem',
-                                            color: isWin ? 'rgba(52, 211, 153, 0.8)' : 'rgba(248, 113, 113, 0.8)',
-                                            marginTop: '2px'
-                                        }}>
-                                            {dayLog.trades.length} {dayLog.trades.length === 1 ? 'posição' : 'posições'}
                                         </div>
                                     </div>
                                 )}
