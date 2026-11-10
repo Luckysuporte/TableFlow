@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../supabaseClient';
 
@@ -47,73 +47,68 @@ export const DataProvider = ({ children }) => {
         try {
             setLoading(true);
 
-            // Load goal with better error handling
-            const { data: goalData, error: goalError } = await supabase
-                .from('goals')
-                .select('*')
-                .eq('user_id', user.id)
-                .maybeSingle(); // Use maybeSingle instead of single to avoid error when no rows
+            // Executa todas as 4 consultas ao banco em paralelo (elimina Waterfall de rede)
+            const [goalRes, accountsRes, logsRes, withdrawalsRes] = await Promise.all([
+                supabase
+                    .from('goals')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .maybeSingle(),
+                supabase
+                    .from('accounts')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false }),
+                supabase
+                    .from('logs')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false }),
+                supabase
+                    .from('withdrawals')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false })
+            ]);
 
-            if (goalError) {
-                console.error('Error loading goal:', goalError);
+            // 1. Goal
+            if (goalRes.error) {
+                console.error('Error loading goal:', goalRes.error);
             }
-
-            if (goalData) {
-                setGoal({ amount: goalData.amount, name: goalData.name });
+            if (goalRes.data) {
+                setGoal({ amount: goalRes.data.amount, name: goalRes.data.name });
             } else {
-                // Create default goal if none exists
                 try {
                     await createDefaultGoal();
                 } catch (error) {
                     console.error('Error creating default goal:', error);
-                    // Set default goal locally if creation fails
                     setGoal({ amount: 10000, name: 'Meu Objetivo' });
                 }
             }
 
-            // Load accounts
-            const { data: accountsData, error: accountsError } = await supabase
-                .from('accounts')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
-
-            if (accountsError) {
-                console.error('Error loading accounts:', accountsError);
+            // 2. Accounts
+            if (accountsRes.error) {
+                console.error('Error loading accounts:', accountsRes.error);
             } else {
-                setAccounts(accountsData || []);
+                setAccounts(accountsRes.data || []);
             }
 
-            // Load logs
-            const { data: logsData, error: logsError } = await supabase
-                .from('logs')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
-
-            if (logsError) {
-                console.error('Error loading logs:', logsError);
+            // 3. Logs
+            if (logsRes.error) {
+                console.error('Error loading logs:', logsRes.error);
             } else {
-                // Normalize field names to camelCase
-                const normalizedLogs = (logsData || []).map(log => ({
+                const normalizedLogs = (logsRes.data || []).map(log => ({
                     ...log,
                     accountId: log.account_id
                 }));
                 setLogs(normalizedLogs);
             }
 
-            // Load withdrawals
-            const { data: withdrawalsData, error: withdrawalsError } = await supabase
-                .from('withdrawals')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
-
-            if (withdrawalsError) {
-                console.error('Error loading withdrawals:', withdrawalsError);
+            // 4. Withdrawals
+            if (withdrawalsRes.error) {
+                console.error('Error loading withdrawals:', withdrawalsRes.error);
             } else {
-                // Normalize field names to camelCase
-                const normalizedWithdrawals = (withdrawalsData || []).map(w => ({
+                const normalizedWithdrawals = (withdrawalsRes.data || []).map(w => ({
                     ...w,
                     accountId: w.account_id,
                     grossAmount: w.gross_amount,
@@ -128,7 +123,6 @@ export const DataProvider = ({ children }) => {
 
         } catch (error) {
             console.error('Error loading user data:', error);
-            // Set default values to prevent infinite loading
             setGoal({ amount: 10000, name: 'Meu Objetivo' });
             setAccounts([]);
             setLogs([]);
@@ -577,7 +571,36 @@ export const DataProvider = ({ children }) => {
         }
     };
 
-    const getSummary = (accountId = null, monthFilter = null) => {
+    // Mapas pré-indexados (O(1) lookup) para evitar loops repetitivos em cada card (Vercel React Best Practices)
+    const logsByAccountMap = useMemo(() => {
+        const map = new Map();
+        logs.forEach(log => {
+            const accId = log.accountId || log.account_id;
+            if (!accId) return;
+            if (!map.has(accId)) map.set(accId, []);
+            map.get(accId).push(log);
+        });
+        return map;
+    }, [logs]);
+
+    const withdrawalsByAccountMap = useMemo(() => {
+        const map = new Map();
+        withdrawals.forEach(w => {
+            const accId = w.accountId || w.account_id;
+            if (!accId) return;
+            if (!map.has(accId)) map.set(accId, []);
+            map.get(accId).push(w);
+        });
+        return map;
+    }, [withdrawals]);
+
+    const accountsByIdMap = useMemo(() => {
+        const map = new Map();
+        accounts.forEach(acc => map.set(acc.id, acc));
+        return map;
+    }, [accounts]);
+
+    const getSummary = useCallback((accountId = null, monthFilter = null) => {
         let totalResult = 0;
         let selectedMonthResult = 0;
         let currentMonthResult = 0;
@@ -592,18 +615,19 @@ export const DataProvider = ({ children }) => {
         let accountLogs = [];
 
         if (accountId) {
-            accountLogs = logs.filter(log =>
-                (log.accountId === accountId) || (log.account_id === accountId)
-            );
-            totalResult = accountLogs.reduce((acc, log) => acc + Number(log.amount), 0);
-
-            const curMonthLogs = accountLogs.filter(log => log.date?.startsWith(currentMonthStr));
-            currentMonthResult = curMonthLogs.reduce((acc, log) => acc + Number(log.amount), 0);
-
-            if (monthFilter && monthFilter !== 'all') {
-                const filtered = accountLogs.filter(log => log.date?.startsWith(monthFilter));
-                selectedMonthResult = filtered.reduce((acc, log) => acc + Number(log.amount), 0);
-            } else {
+            accountLogs = logsByAccountMap.get(accountId) || [];
+            for (let i = 0; i < accountLogs.length; i++) {
+                const log = accountLogs[i];
+                const amt = Number(log.amount || 0);
+                totalResult += amt;
+                if (log.date?.startsWith(currentMonthStr)) {
+                    currentMonthResult += amt;
+                }
+                if (monthFilter && monthFilter !== 'all' && log.date?.startsWith(monthFilter)) {
+                    selectedMonthResult += amt;
+                }
+            }
+            if (!monthFilter || monthFilter === 'all') {
                 selectedMonthResult = totalResult;
             }
         } else {
@@ -621,7 +645,7 @@ export const DataProvider = ({ children }) => {
         let maxLoss = 0;
 
         if (accountId) {
-            const account = accounts.find(a => a.id === accountId);
+            const account = accountsByIdMap.get(accountId);
             if (account) {
                 if (account.goal !== undefined && account.goal !== null) {
                     targetAmount = Number(account.goal);
@@ -631,15 +655,16 @@ export const DataProvider = ({ children }) => {
                 maxLoss = Number(account.max_loss || 0);
             }
 
-            const todayLogs = accountLogs.filter(log => log.date === todayStr);
-            todayResult = todayLogs.reduce((acc, log) => acc + Number(log.amount), 0);
+            for (let i = 0; i < accountLogs.length; i++) {
+                if (accountLogs[i].date === todayStr) {
+                    todayResult += Number(accountLogs[i].amount || 0);
+                }
+            }
 
-            const accountWithdrawals = withdrawals.filter(w =>
-                (w.accountId === accountId) || (w.account_id === accountId)
-            );
-            accountWithdrawalsTotal = accountWithdrawals.reduce((acc, w) =>
-                acc + Number(w.grossAmount || w.gross_amount || 0), 0
-            );
+            const accountWithdrawals = withdrawalsByAccountMap.get(accountId) || [];
+            for (let i = 0; i < accountWithdrawals.length; i++) {
+                accountWithdrawalsTotal += Number(accountWithdrawals[i].grossAmount || accountWithdrawals[i].gross_amount || 0);
+            }
         }
 
         const currentBalance = initialBalance + totalResult - accountWithdrawalsTotal;
@@ -670,10 +695,10 @@ export const DataProvider = ({ children }) => {
             isGoalMet: targetAmount > 0 && activeResultForGoal >= targetAmount,
             isAccountBlown
         };
-    };
+    }, [logsByAccountMap, withdrawalsByAccountMap, accountsByIdMap, withdrawals, goal.amount]);
 
-    // Métricas Agregadas de Alta Performance para a Visão Geral
-    const getOverviewKPIs = () => {
+    // Métricas Agregadas de Alta Performance Memoizadas para a Visão Geral
+    const overviewKPIsMemo = useMemo(() => {
         const now = new Date();
         const curYear = now.getFullYear();
         const curMonth = String(now.getMonth() + 1).padStart(2, '0');
@@ -681,20 +706,15 @@ export const DataProvider = ({ children }) => {
         const todayStr = `${curYear}-${curMonth}-${curDay}`;
         const currentMonthStr = `${curYear}-${curMonth}`;
 
-        const accountMap = new Map();
-        accounts.forEach(acc => accountMap.set(acc.id, acc));
-
-        // 1. Hoje
+        // 1. Hoje & 2. Mês Atual
         let todayResultBRL = 0;
         let todayResultUSD = 0;
-
-        // 2. Mês Atual
         let monthResultBRL = 0;
         let monthResultUSD = 0;
 
         logs.forEach(log => {
             const accId = log.accountId || log.account_id;
-            const acc = accountMap.get(accId);
+            const acc = accountsByIdMap.get(accId);
             const currency = acc?.currency || 'BRL';
             const amount = Number(log.amount || 0);
 
@@ -717,9 +737,9 @@ export const DataProvider = ({ children }) => {
         realAccounts.forEach(acc => {
             const initial = Number(acc.initial_balance || 0);
             const currency = acc.currency || 'BRL';
-            const accLogs = logs.filter(l => (l.accountId === acc.id || l.account_id === acc.id));
+            const accLogs = logsByAccountMap.get(acc.id) || [];
             const accProfit = accLogs.reduce((sum, l) => sum + Number(l.amount || 0), 0);
-            const accW = withdrawals.filter(w => (w.accountId === acc.id || w.account_id === acc.id));
+            const accW = withdrawalsByAccountMap.get(acc.id) || [];
             const accWithdrawn = accW.reduce((sum, w) => sum + Number(w.grossAmount || w.gross_amount || 0), 0);
             const available = initial + accProfit - accWithdrawn;
             const positiveAvailable = available > 0 ? available : 0;
@@ -764,7 +784,8 @@ export const DataProvider = ({ children }) => {
 
         // 6. Ranking das Melhores Mesas do Mês
         const accountsPerformance = accounts.map(acc => {
-            const accLogs = logs.filter(l => (l.accountId === acc.id || l.account_id === acc.id) && l.date && l.date.startsWith(currentMonthStr));
+            const accLogsAll = logsByAccountMap.get(acc.id) || [];
+            const accLogs = accLogsAll.filter(l => l.date && l.date.startsWith(currentMonthStr));
             const monthProfit = accLogs.reduce((sum, l) => sum + Number(l.amount || 0), 0);
             return {
                 id: acc.id,
@@ -793,7 +814,9 @@ export const DataProvider = ({ children }) => {
             equityCurveData,
             accountsPerformance
         };
-    };
+    }, [accounts, logs, accountsByIdMap, logsByAccountMap, withdrawalsByAccountMap]);
+
+    const getOverviewKPIs = useCallback(() => overviewKPIsMemo, [overviewKPIsMemo]);
 
     if (loading) {
         return (

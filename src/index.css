@@ -79,21 +79,19 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   justify-content: center;
 }
 
-/* Glassmorphism Card Improved */
+/* Glassmorphism Card Improved (GPU-Optimized for Zero Lag) */
 .glass-card {
-  background: rgba(20, 20, 35, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(139, 92, 246, 0.1);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  background: linear-gradient(145deg, rgba(24, 24, 44, 0.94), rgba(16, 16, 32, 0.96));
+  border: 1px solid rgba(139, 92, 246, 0.14);
+  box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.45);
   border-radius: 16px;
   padding: 24px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .glass-card:hover {
-  border-color: rgba(139, 92, 246, 0.3);
-  box-shadow: 0 12px 40px 0 rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.32);
+  box-shadow: 0 8px 24px 0 rgba(139, 92, 246, 0.12);
 }
 
 /* Neon Glow Utilities */
@@ -119,15 +117,14 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 .glass-button {
   position: relative;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: white;
   font-weight: 600;
   border-radius: 12px;
   cursor: pointer;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   z-index: 2;
   display: flex;
   align-items: center;

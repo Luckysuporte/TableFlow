@@ -1,19 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import Button from '../components/Button';
 import GoalTracker from '../components/GoalTracker';
-import AccountsManager from '../components/AccountsManager';
-import WithdrawalManager from '../components/WithdrawalManager';
 import OverviewMetrics from '../components/OverviewMetrics';
 import EquityChart from '../components/EquityChart';
 import RecentActivity from '../components/RecentActivity';
-import ReportsPage from '../components/ReportsPage';
-import ProfilePage from './ProfilePage';
-import SettingsPage from './SettingsPage';
 import { ActiveTablesCard, TopAccountsCard, AlertsCard, WithdrawalSummaryCard } from '../components/SummaryCards';
 import { LogOut, LayoutDashboard, Monitor, Wallet, User, Settings, ChevronDown, FileText, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const AccountsManager = lazy(() => import('../components/AccountsManager'));
+const WithdrawalManager = lazy(() => import('../components/WithdrawalManager'));
+const ReportsPage = lazy(() => import('../components/ReportsPage'));
+const ProfilePage = lazy(() => import('./ProfilePage'));
+const SettingsPage = lazy(() => import('./SettingsPage'));
 
 const Dashboard = () => {
     const { user, logout } = useAuth();
@@ -232,15 +233,13 @@ const Dashboard = () => {
                 </div>
 
                 {/* Tab Content */}
-                <AnimatePresence mode="wait">
+                <Suspense fallback={
+                    <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>
+                        Carregando seção...
+                    </div>
+                }>
                     {activeTab === 'overview' && (
-                        <motion.div
-                            key="overview"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.3 }}
-                        >
+                        <div>
                             {/* Métricas Principais em Tempo Real (4 KPIs) */}
                             <OverviewMetrics />
 
@@ -263,56 +262,38 @@ const Dashboard = () => {
 
                             {/* Seção Inferior: Últimas Movimentações com Moedas e Registro Rápido */}
                             <RecentActivity />
-                        </motion.div>
+                        </div>
                     )}
 
                     {activeTab === 'accounts' && (
-                        <motion.div
-                            key="accounts"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            transition={{ duration: 0.3 }}
-                        >
+                        <div>
                             <AccountsManager />
-                        </motion.div>
+                        </div>
                     )}
 
                     {activeTab === 'withdrawals' && (
-                        <motion.div
-                            key="withdrawals"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            transition={{ duration: 0.3 }}
-                        >
+                        <div>
                             <WithdrawalManager />
-                        </motion.div>
+                        </div>
                     )}
 
                     {activeTab === 'reports' && (
-                        <motion.div
-                            key="reports"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            transition={{ duration: 0.3 }}
-                        >
+                        <div>
                             <ReportsPage />
-                        </motion.div>
+                        </div>
                     )}
-                </AnimatePresence>
+                </Suspense>
             </main>
 
             {/* Profile Modal */}
-            <AnimatePresence>
+            <Suspense fallback={null}>
                 {showProfile && <ProfilePage onClose={() => setShowProfile(false)} />}
-            </AnimatePresence>
+            </Suspense>
 
             {/* Settings Modal */}
-            <AnimatePresence>
+            <Suspense fallback={null}>
                 {showSettings && <SettingsPage onClose={() => setShowSettings(false)} />}
-            </AnimatePresence>
+            </Suspense>
         </div>
     );
 };
